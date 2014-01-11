@@ -2,7 +2,7 @@ node_modules
 test
 .grunt
 
-svelte\js
-svelte\css
+svelte/js
+svelte/css
 
 *.ftppass
