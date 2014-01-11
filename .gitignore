@@ -1,4 +1,8 @@
 node_modules
-.grunt
-*.ftppass
 test
+.grunt
+
+svelte/js
+svelte/js
+
+*.ftppass
