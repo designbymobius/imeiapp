@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+
+<html manifest="manifest.appcache">	
+
+	<head>
+		<title>Mizbeach IMEI Storage App</title>
+
+	<!-- build:style inline base -->
+		<link rel="stylesheet" type="text/css" href="css/base.css">
+	<!-- /build -->
+
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+	</head>
+
+	<body>
+		<header id="app-hud">
+			<div class="connection-indicator" title="Network Connection Status"></div>
+			<div class="title"> Mizbeach </div>
+			<div class="settings"></div>
+			<div class="restart">RESTART</div>
+		</header>
+
+		<div class="fullscreen">
+			<div class="headline">Make it Possible to Identify a Device We Sold in a Few Easy Steps</div>
+			<div class="title">Register the device sold to precisely identify the device sold without the aid of a receipt</div>
+
+			<div id="start-registration">Start Registration</div>
+		</div>
+
+		<div id="step-1" class="fullscreen">
+			
+			<div class="headline">Step 1: Invoice Number</div>
+			<div class="title">Enter the Invoice Number in the Form Field below to begin</div>
+			<div class="subtext">Pairing a device to an invoice allows us to look up client's details with the device's IMEI number</div>
+
+			<input id="invoice" placeholder="Touch Me to Enter the Invoice Number">
+			
+			<div id="addIMEI" class="progress">Next Step</div>	
+			
+		</div>	
+
+		<div id="step-2" class="fullscreen">
+			
+			<div class="headline">Step 2: Add Device IMEIs to Invoice <span class="invoiceNumber">OT0624</span></div>
+			<div class="subtext">Enter the IMEI and click 'Save IMEI' to add the device to Invoice <span class="invoiceNumber"></span>. Next Step will not appear until at least 1 IMEI has been added </div>
+
+			<input id="IMEI" placeholder="Insert Device IMEI Number Here">
+
+			<div class="editInvoiceNumber">&larr; Back</div>
+			<div id="editSavedIMEIs">Edit (<span class="imeiTally">0</span>)</div>
+			<div id="addIMEItoInvoice">Save IMEI</div>
+			<div id="reviewInvoice" class="progress">Next Step</div>	
+			
+		</div>
+
+		<div id="step-3" class="fullscreen">
+
+			<div class="headline">Step 3: Review Invoice <span class="invoiceNumber">OT0624</span></div>
+			<div class="title">Confirm the attached IMEIs are correct. Click on the incorrect ones to edit them</div>
+			<div id="imeiReviewList" class="subtext"></div>
+			<div class="controls-wrapper">				
+				<div class="editInvoiceAttachments">&larr; Back</div>
+			</div>
+			<div id="finish-registration">Complete Registration</div>	
+		</div>
+
+	<!-- build:script inline core -->
+		<script type="text/javascript" src="js/pubsub.js"></script>
+		<script type="text/javascript" src="js/sha1.js"></script>
+		<script type="text/javascript" src="js/offline.min.js"></script>
+		<script type="text/javascript" src="js/behavior.js"></script>
+		<script type="text/javascript" src="js/app-init.js"></script>
+	<!-- /build -->
+	</body>
+</html>
