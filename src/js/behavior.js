@@ -299,20 +299,11 @@
             return JSON.parse(clean_storage);
         }
 
-            imeiapp.utils.getRegistrationStorage = function(){
+            imeiapp.utils.getRegistrationStorage = function(){ return imeiapp.utils.getStorage('registrations'); }
 
-                return imeiapp.utils.getStorage('registrations');
-            }
+    		imeiapp.utils.getTransactionStorage = function(){ return imeiapp.utils.getStorage('transactions'); }
 
-    		imeiapp.utils.getTransactionStorage = function(){
-
-    			return imeiapp.utils.getStorage('transactions');
-    		}
-
-    		imeiapp.utils.getArchiveStorage = function(){
-
-    			return imeiapp.utils.getStorage('archives');
-    		}
+    		imeiapp.utils.getArchiveStorage = function(){ return imeiapp.utils.getStorage('archives'); }
 
     // Lock Storage
     	imeiapp.utils.lockStorage = function(storageName){
@@ -323,20 +314,11 @@
     		return true;
     	}
 
-    		imeiapp.utils.lockRegistrations = function(){
+    		imeiapp.utils.lockRegistrations = function(){ return imeiapp.utils.lockStorage('registrations'); }
 
-    			return imeiapp.utils.lockStorage('registrations');
-    		}
+    		imeiapp.utils.lockTransactions = function(){ return imeiapp.utils.lockStorage('transactions'); }
 
-    		imeiapp.utils.lockTransactions = function(){
-
-    			return imeiapp.utils.lockStorage('transactions');
-    		}
-
-    		imeiapp.utils.lockArchives = function(){
-
-    			return imeiapp.utils.lockStorage('archives');
-    		}
+    		imeiapp.utils.lockArchives = function(){ return imeiapp.utils.lockStorage('archives'); }
 
     // Unlock Storage
     	imeiapp.utils.unlockStorage = function(storageName){
@@ -347,20 +329,11 @@
     		return true;
     	}
 
-    		imeiapp.utils.unlockRegistrations = function(){
+    		imeiapp.utils.unlockRegistrations = function(){ return imeiapp.utils.unlockStorage('registrations'); }
 
-    			return imeiapp.utils.unlockStorage('registrations');
-    		}
+    		imeiapp.utils.unlockTransactions = function(){ return imeiapp.utils.unlockStorage('transactions'); }
 
-    		imeiapp.utils.unlockTransactions = function(){
-
-    			return imeiapp.utils.unlockStorage('transactions');
-    		}
-
-    		imeiapp.utils.unlockArchives = function(){
-
-    			return imeiapp.utils.unlockStorage('archives');
-    		}
+    		imeiapp.utils.unlockArchives = function(){ return imeiapp.utils.unlockStorage('archives'); }
 
     // Save to Storage
         imeiapp.utils.storeRegistration = function(registration){
@@ -383,10 +356,15 @@
                 return "delayed";
             }
 
+            imeiapp.utils.lockRegistrations();
+
             var storage = imeiapp.utils.getRegistrationStorage();
             storage.push(registration);
 
             imeiapp.storage['registrations'] = JSON.stringify(storage);
+
+            imeiapp.utils.unlockRegistrations();
+
             return true;
         }
 
@@ -1133,38 +1111,6 @@
 			Offline.check();
 		}
 
-		imeiapp.network.connectionLightFlickerOn = function(){
-
-			var _utils = imeiapp.utils;
-			var indicators = imeiapp.DOM["connectionIndicator"];
-			
-			// Flicker Orange Lights  
-				imeiapp.network.checking = setInterval( function(){				
-
-					for (var i = indicators.length - 1; i >= 0; i--) {
-						
-						// Orange On
-							_utils.addClass(indicators[i], "connection-checking");
-
-						// Orange Off
-							setTimeout( function(){
-
-								var count = i;
-
-								return function(){
-
-									_utils.removeClass(indicators[count], "connection-checking");
-								}
-							}(), 350);
-					};
-				}, 2000);
-		}
-
-		imeiapp.network.connectionLightFlickerOff = function(){
-
-			clearInterval(imeiapp.network.checking);
-		}
-
 		imeiapp.network.setOnlineState = function(){
 			
 			var _utils = imeiapp.utils;
@@ -1346,31 +1292,32 @@
 				}
 
 				server_trip.send('t=' + keys_to_confirm);
-		}
+			}
 
-		imeiapp.pubsub.subscribe(
+		// log result of send transaction
+			imeiapp.pubsub.subscribe(
 
-			"server-acknowledged-transaction",
-			"process-acknowledged-transaction",
-			function(metadata){
+				"server-acknowledged-transaction",
+				"console.log",
+				function(metadata){
 
-				var server_id = metadata.notificationParams.server_transaction_id;
-				var client_id = metadata.notificationParams.client_transaction_id;
+					var server_id = metadata.notificationParams.server_transaction_id;
+					var client_id = metadata.notificationParams.client_transaction_id;
 
-				if (server_id == client_id){
+					if (server_id == client_id){
 
-					console.log("server received transaction " + server_id );
+						console.log("server received transaction " + server_id );
 
-				}
+					}
 
-				else { 
+					else { 
 
-					console.log("something went wrong: client and server id don't match");
-					console.log(metadata.notificationParams);
-				}
-			},
-			null
-		);
+						console.log("something went wrong: client and server id don't match");
+						console.log(metadata.notificationParams);
+					}
+				},
+				null
+			);
 
 		imeiapp.pubsub.subscribe(
 
@@ -1492,26 +1439,46 @@
 			imeiapp.pubsub.publish("network-reconnecting-exit", null, "connection-watchdog");
 		});
 
-		// Network Status -> Checking
+		// Network Status Reconnecting -> Indicator Light Flicker 
 			imeiapp.pubsub.subscribe(
 
 				'network-reconnecting', 
-				'online-indicator',
+				'light-flicker',
 				function(){
 
-					imeiapp.network.connectionLightFlickerOn();
-				},
-				null
-			);
+					var _utils = imeiapp.utils,
+						indicators = imeiapp.DOM["connectionIndicator"];
+					
+					// Flicker Lights while Reconnecting  
+						imeiapp.network.checkingLightFlickerInterval = setInterval( function(){				
 
-		// Network Status -> Checking End
-			imeiapp.pubsub.subscribe(
+							for (var i = indicators.length - 1; i >= 0; i--) {
+								
+								// Orange On
+									_utils.addClass(indicators[i], "connection-checking");
 
-				'network-reconnecting-exit', 
-				'online-indicator',
-				function(){
+								// Orange Off
+									setTimeout( function(){
 
-					imeiapp.network.connectionLightFlickerOff();
+										var count = i;
+
+										return function(){ _utils.removeClass(indicators[count], "connection-checking"); }
+									}(), 350);
+							};
+						}, 2000);
+
+					// Stop Flickering on Reconnect Exit
+						imeiapp.pubsub.subscribe(
+
+							'network-reconnecting-exit', 
+							'light-flicker',
+							function(){
+
+								clearInterval( imeiapp.network.checkingLightFlickerInterval );
+								imeiapp.pubsub.unsubscribe('network-reconnecting-exit', 'light-flicker');
+							},
+							null
+						);
 				},
 				null
 			);
@@ -1547,21 +1514,39 @@
 				'heartbeat',
 				function(){ 
 					
+					// required vars
 					var _n = imeiapp.network,
+						_p = imeiapp.pubsub,
+
 						_int = _n.intervals,
+						_sub = _p.subscribe,
+						_unsub = _p.unsubscribe,
+
 						heartbeat = function(){
 							
 							_n.checkNetworkState();
+						},
+
+						stopHeartbeat = function(){
+
+							clearInterval(_int.heartbeat);
+							delete _int.heartbeat;
 						};
 
-					// check every 5s
-						_int.heartbeat = setInterval(function(){
+					// check every 7.5s
+						_int.heartbeat = setInterval( heartbeat, 1000 * 7.5);
 
-							if (_n.networkState() == "up") { heartbeat(); }
+					// stop heartbeat on disconnect from the internet
+						_sub(
+							"network-down",
+							"heartbeat",
+							function(){
 
-							else { clearInterval(_int.heartbeat); }
-
-						}, 1000 * 5);
+								stopHeartbeat();
+								_unsub("network-down", "heartbeat");								
+							},
+							null
+						);
 				},
 				null
 			);
@@ -1574,12 +1559,17 @@
 				function(){
 
 					// reqs
-						var _app = imeiapp,
-							_n = _app.network,
-							_s = _app.storage,
-							
-							confirmArchivedTransactions = function(){						
+					var _app = imeiapp,
+						_n = _app.network,
+						_s = _app.storage,
+						_p = _app.pubsub,
+
+						_int = _n.intervals,
+						_sub = _p.subscribe,
+						_unsub = _p.unsubscribe,
 						
+						confirmArchivedTransactions = function(){						
+					
 							// filter out bad input
 		                        if( !_s || !_s.archives || !JSON.parse(_s.archives) ){ return; }
 
@@ -1594,28 +1584,32 @@
 										break;
 									}
 								}
-							},
+						},
 
-							cancelArchiveInterval = function(){
+						cancelArchivedTransactionsInterval = function(){
 
-								clearInterval(_n.confirmArchivedTransactionsInterval);
-								delete _n.confirmArchivedTransactionsInterval;
-							};
+							clearInterval(_int.confirmArchivedTransactions);
+							delete _int.confirmArchivedTransactions;
+						};
 
 					// confirm now
 						confirmArchivedTransactions();
 
-					// prevent interval duplicity
-						if(_n.confirmArchivedTransactionsInterval){ cancelArchiveInterval(); }
+					// confirm every 9 mins: 1000(ms) * 60(s) * 9(m)
+						_int.confirmArchivedTransactions = setInterval( confirmArchivedTransactions, 1000 * 60 * 9);
 
-					// confirm every 10 mins: 1000(ms) * 60(s) * 10(m)
-						_n.confirmArchivedTransactionsInterval = setInterval(function(){
-							
-							if (_n.networkState() == "up"){ confirmArchivedTransactions(); }
+					// cancel interval when network's down
+						_sub(
 
-							else { cancelArchiveInterval(); } 
+							"network-down",
+							"confirm-transactions",
+							function(){
 
-						}, 1000 * 60 * 1);
+								cancelArchivedTransactionsInterval();
+								_unsub("network-down","confirm-transactions");
+							},
+							null
+						);
 				},
 				null
 			);
@@ -1629,8 +1623,13 @@
 
 					// reqs
 					var _app = imeiapp,
+						_p = _app.pubsub,
 						_n = _app.network,
 						_s = _app.storage,
+
+						_int = _n.intervals,
+						_sub = _p.subscribe,
+						_unsub = _p.unsubscribe,
 
 						checkTransactionStatus = function(){
 
@@ -1650,26 +1649,30 @@
 								}
 						},
 
-						cancelTransactionInterval = function(){
+						cancelCheckTransactionStatusInterval = function(){
 
-							clearInterval(_n.transactionStatusCheckInterval);
-							delete _n.transactionStatusCheckInterval;
+							clearInterval(_int.transactionStatusCheck);
+							delete _int.transactionStatusCheck;
 						};
 
 					// check now
 						checkTransactionStatus();
 
-					// prevent interval duplication
-						if(_n.transactionStatusCheckInterval){ cancelTransactionInterval(); }
-
 					// check every 10 mins: 1000(ms) * 60(s) * 10(m)
-						_n.transactionStatusCheckInterval = setInterval(function(){
-							
-							if (_n.networkState() == "up"){ checkTransactionStatus(); }
+						_int.transactionStatusCheck = setInterval(checkTransactionStatus, 1000 * 60 * 10);
 
-							else { cancelTransactionInterval(); } 
+					// cancel interval when network's down
+						_sub(
 
-						}, 1000 * 60 * 1);
+							"network-down",
+							"check-transaction-status",
+							function(){
+
+								cancelCheckTransactionStatusInterval();
+								_unsub("network-down", "check-transaction-status");
+							},
+							null
+						);
 				},
 				null
 			);
@@ -1683,8 +1686,13 @@
 					
 					// reqs
 					var _app = imeiapp,
+						_p = _app.pubsub,
 						_n = _app.network,
 						_s = _app.storage,
+
+						_int = _n.intervals,
+						_sub = _p.subscribe,
+						_unsub = _p.unsubscribe,
 
 						pushRegistrations = function(){
 
@@ -1694,26 +1702,30 @@
 							_n.pushRegistrations();
 						},
 
-						cancelRegistrationInterval = function(){
+						cancelPushRegistrationsInterval = function(){
 
-							clearInterval(_n.pushRegistrationsInterval); 
-							delete _n.pushRegistrationsInterval; 
+							clearInterval(_int.pushRegistrations); 
+							delete _int.pushRegistrations; 
 						};
 
 					// push now
 						pushRegistrations();
 
-					// prevent interval duplication
-						if (_n.pushRegistrationsInterval){ cancelRegistrationInterval(); }
+					// push every 11m
+						_int.pushRegistrations = setInterval( pushRegistrations, 1000 * 60 * 11);
 
-					// push every 10m
-						_n.pushRegistrationsInterval = setInterval(function(){
+					// clear interval when network's down
+						_sub(
 
-							if(_n.networkState() == "up"){ pushRegistrations(); }
+							"network-down",
+							"push-registrations-to-server",
+							function(){
 
-							else { cancelRegistrationInterval(); }
-
-						}, 1000 * 60 * 1);
+								cancelPushRegistrationsInterval();
+								_unsub("network-down","push-registrations-to-server");
+							},
+							null
+						);
 				},
 				null
 			);
