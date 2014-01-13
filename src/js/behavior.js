@@ -11,10 +11,7 @@
 	imeiapp.storage = window.localStorage;
 
 // Flags
-	imeiapp.stats.step = 0,
-    imeiapp.stats.archives = "unlocked",
-    imeiapp.stats.transactions = "unlocked",
-    imeiapp.stats.registrations = "unlocked";
+	imeiapp.stats.step = 0;
 
 // Current Invoice
 	imeiapp.currentInvoice.invoice = "";
@@ -305,78 +302,23 @@
 
     		imeiapp.utils.getArchiveStorage = function(){ return imeiapp.utils.getStorage('archives'); }
 
-    // Lock Storage
-    	imeiapp.utils.lockStorage = function(storageName){
-
-    		if(!storageName) { return false; }
-
-    		imeiapp.stats[storageName] = "locked";
-    		return true;
-    	}
-
-    		imeiapp.utils.lockRegistrations = function(){ return imeiapp.utils.lockStorage('registrations'); }
-
-    		imeiapp.utils.lockTransactions = function(){ return imeiapp.utils.lockStorage('transactions'); }
-
-    		imeiapp.utils.lockArchives = function(){ return imeiapp.utils.lockStorage('archives'); }
-
-    // Unlock Storage
-    	imeiapp.utils.unlockStorage = function(storageName){
-
-    		if(!storageName) { return false; }
-
-    		imeiapp.stats[storageName] = "unlocked";
-    		return true;
-    	}
-
-    		imeiapp.utils.unlockRegistrations = function(){ return imeiapp.utils.unlockStorage('registrations'); }
-
-    		imeiapp.utils.unlockTransactions = function(){ return imeiapp.utils.unlockStorage('transactions'); }
-
-    		imeiapp.utils.unlockArchives = function(){ return imeiapp.utils.unlockStorage('archives'); }
-
     // Save to Storage
         imeiapp.utils.storeRegistration = function(registration){
 
-            if(Object.prototype.toString.call(registration) != "[object Object]") { return false; }
+        	// filter
+            	if (Object.prototype.toString.call(registration) != "[object Object]") { return false; }
 
-            if(imeiapp.stats.registrations != "unlocked"){
+            // update storage
+	            var storage = imeiapp.utils.getRegistrationStorage();
+	            storage.push(registration);
 
-                var reattempt = function(){
-                    
-                    var lockedOutRegistration = JSON.parse( JSON.stringify(registration) );
-                    
-                    return function(){
-                        imeiapp.utils.storeRegistration( lockedOutRegistration );
-                    }
-                }(); 
-                
-                setTimeout(reattempt, 2500);
-
-                return "delayed";
-            }
-
-            imeiapp.utils.lockRegistrations();
-
-            var storage = imeiapp.utils.getRegistrationStorage();
-            storage.push(registration);
-
-            imeiapp.storage['registrations'] = JSON.stringify(storage);
-
-            imeiapp.utils.unlockRegistrations();
+	            imeiapp.storage['registrations'] = JSON.stringify(storage);
 
             return true;
         }
 
 	// Create Transaction
 		imeiapp.utils.storeTransaction = function(){
-
-			// skip if transaction storage is locked
-            	if (imeiapp.stats.transactions != "unlocked"){ return false; }
-
-            // lock it to prevent data loss
-            	imeiapp.utils.lockTransactions();
-            	imeiapp.utils.lockRegistrations();
 
        		// load tools
 	            var _u = imeiapp.utils;
@@ -394,20 +336,17 @@
 			*/
 	            var transaction_string = JSON.stringify(_u.getRegistrationStorage());
 	            var clean_string = utf8(transaction_string).replace(/"/g, '\\"');
-	            var id = sha1( '"' + clean_string + '"' );
+	            var transaction_id = sha1( '"' + clean_string + '"' );
 
-			transactions_db[id] = transaction_string;
+	        // update transactions storage
+				transactions_db[transaction_id] = transaction_string;
+				imeiapp.storage.transactions = JSON.stringify(transactions_db);
 
-			imeiapp.storage.transactions = JSON.stringify(transactions_db);
+			// reset registrations storage
+				delete imeiapp.storage.registrations;
+				imeiapp.utils.createRegistrationStorage();	
 
-			delete imeiapp.storage.registrations;
-			imeiapp.utils.createRegistrationStorage();
-
-			// unlock
-            	imeiapp.utils.unlockTransactions();
-                imeiapp.utils.unlockRegistrations();	
-
-            return id;
+            return transaction_id;
 		}
 
 	// Get Transaction
@@ -426,24 +365,6 @@
 			// filter
 				if (!transaction_id){ return false; }
 
-			// set reattempt if any of the required dbs are locked
-            	if ( imeiapp.stats.transactions != "unlocked" || imeiapp.stats.archives != "unlocked" ){ 
-
-            		var reattempt = function(){
-
-            			var id = transaction_id;
-
-            			return function(){ imeiapp.utils.archiveTransaction(id); }
-            		}();
-
-            		setTimeout(reattempt, 5000);
-            		return "delayed";
-            	}
-
-            // lock storages to prevent data loss
-            	imeiapp.utils.lockTransactions();
-            	imeiapp.utils.lockArchives();
-
        		// load tools
 	            var _u = imeiapp.utils;
 
@@ -457,10 +378,6 @@
 				imeiapp.storage.archives = JSON.stringify(archives_db);
 				imeiapp.storage.transactions = JSON.stringify(transactions_db);
 
-			// unlock storages
-	        	imeiapp.utils.unlockTransactions();
-	            imeiapp.utils.unlockArchives();
-
             return true;
 		}
 
@@ -469,23 +386,6 @@
 
 			// filter
 				if (!transaction_id){ return false; }
-
-			// set reattempt if any of the required dbs are locked
-            	if ( imeiapp.stats.archives != "unlocked" ){ 
-
-            		var reattempt = function(){
-
-            			var id = transaction_id;
-
-            			return function(){ imeiapp.utils.deleteArchiveEntry(id); }
-            		}();
-
-            		setTimeout(reattempt, 5000);
-            		return "delayed";
-            	}
-
-            // lock it to prevent data loss
-            	imeiapp.utils.lockArchives();
 
        		// load tools
 	            var _u = imeiapp.utils;
@@ -497,9 +397,6 @@
 				console.log("deleted transaction #" + transaction_id + " from archives");
 
 				imeiapp.storage.archives = JSON.stringify(archives_db);
-
-			// unlock storages
-	            imeiapp.utils.unlockArchives();
 
             return true;
 		}
