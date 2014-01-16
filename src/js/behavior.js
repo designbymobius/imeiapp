@@ -1034,30 +1034,8 @@
 	            var _u = _i.utils,
 	            	_n = _i.network;
 
-            // turn registrations into a transaction, isolate it then initiate transaction processing
-				var create_transaction = _u.storeTransaction(); 
-
- 			// concurrently pushed registrations will retry til transaction list is unlocked
-                if (create_transaction == false){
-
-                	setTimeout(
-                	
-                		function(){
-
-                			if( !imeiapp.storage || !imeiapp.storage.registrations || !JSON.parse(imeiapp.storage.registrations) || JSON.parse(imeiapp.storage.registrations).length < 1 ){ return; }
-                			imeiapp.network.pushRegistrations();
-                		}, 
-                		60000
-                	);			
-                	
-                	return false;
-                } 
-
-            // get transaction id
-                else {
-
-                	var transaction_id = create_transaction;                	
-                }
+            // turn registrations into a transaction and get the transaction id
+				var transaction_id = _u.storeTransaction();
 
             // send transaction to server               
                 _n.sendTransaction( transaction_id );
@@ -1072,72 +1050,54 @@
 				if( !transaction_id ) { return false; }
 
 			// required variables
-				var _publish = imeiapp.pubsub.publish;			
-	            var _u = imeiapp.utils;
+				var _publish = imeiapp.pubsub.publish,			
+	            	_POST = imeiapp.network.POST,
+	            	_u = imeiapp.utils,
+					utf8 = _u.utf8,
 
-				var utf8 = _u.utf8;
-				var sha1 = _u.sha1;
-				var transaction = _u.getTransaction(transaction_id);
+					transaction = _u.getTransaction(transaction_id),
+	            	transaction_string = JSON.stringify(transaction),
+	            	clean_transaction_string = utf8(transaction_string);
+					
+					POST_success = function(response){
 
-	            var transaction_string = JSON.stringify(transaction);
-	            var clean_string = utf8(transaction_string);
-				var server_trip = new XMLHttpRequest();
-
-			// prepare ajax request to server 
-				server_trip.open('POST', location.href + 'process-transaction.php', true);
-				server_trip.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-
-			// prepare response
-				server_trip.onreadystatechange = function(){
-
-					if (server_trip.readyState==4 && server_trip.status==200){
+						var publish_params = {};
+							publish_params.server_transaction_id = response,
+							publish_params.client_transaction_id = transaction_id;
 
 						_publish(
 
 							"server-acknowledged-transaction",
-							{
-								server_transaction_id: server_trip.responseText,
-								client_transaction_id: transaction_id
-							},
+							publish_params,
 							"sendTransaction"
 						);
 					}
-				}
 
-				server_trip.send('t=' + clean_string);
+			// send transaction
+				var sendTransactionSuccess = _POST(
 
-				return true;
+					location.href + 'process-transaction.php',
+					't=' + clean_transaction_string,
+					POST_success					
+				);
+
+			return sendTransactionSuccess;
 		}
 
 	// check status of pending transactions
 		imeiapp.network.checkTransactionStatus = function(){
 
-			var _publish = imeiapp.pubsub.publish;			
-            var _u = imeiapp.utils;
+			// required vars
+			var _publish = imeiapp.pubsub.publish,			
+				_POST = imeiapp.network.POST,
+            	_u = imeiapp.utils,
+				
+				keys_to_check = [],
+				transactions_db = _u.getTransactionStorage(),
+				
+				POST_success = function(response){
 
-			var utf8 = _u.utf8;
-			var sha1 = _u.sha1;
-			var transactions_db = _u.getTransactionStorage();
-
-			var server_trip = new XMLHttpRequest();
-			var keys_to_check = [];
-
-			for (var transaction_id in transactions_db) {
-			 	
-			 	if (!transactions_db.hasOwnProperty(transaction_id)) { continue; }
-			    
-			 	keys_to_check.push( transaction_id );			  	
-			}
-
-				keys_to_check = JSON.stringify( keys_to_check );
-
-				server_trip.open('POST', location.href + 'transaction-status-check.php', true);
-				server_trip.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-				server_trip.onreadystatechange = function(){
-
-					if (server_trip.readyState==4 && server_trip.status==200){
-
-						var status_updates = JSON.parse(server_trip.responseText);
+					var status_updates = JSON.parse(response);
 
 						_publish(
 
@@ -1145,50 +1105,101 @@
 							status_updates,
 							"checkTransactionStatus"
 						);
-					}
+				};
+
+			// get transaction ids
+				for (var transaction_id in transactions_db) {
+				 	
+				 	if (!transactions_db.hasOwnProperty(transaction_id)) { continue; }
+				    
+				 	keys_to_check.push( transaction_id );			  	
 				}
 
-				server_trip.send('t=' + keys_to_check);
+				keys_to_check = JSON.stringify( keys_to_check );
+
+			// POST				
+				_POST(
+
+					location.href + 'transaction-status-check.php',
+					't=' + keys_to_check,
+					POST_success
+				);
 		}
 
 	// check status of pending transactions
 		imeiapp.network.confirmArchivedTransactions = function(){
 
-			var _publish = imeiapp.pubsub.publish;			
-            var _u = imeiapp.utils;
+			// required variables
+			var _app = imeiapp,
+            	_u = _app.utils,
+            	_POST = _app.network.POST,
+				_publish = _app.pubsub.publish,			
 
-			var archives_db = _u.getArchiveStorage();
+				keys_to_confirm = [],
+				archives_db = _u.getArchiveStorage(),
 
-			var server_trip = new XMLHttpRequest();
-			var keys_to_confirm = [];
+				post_success = function(response){
 
-			for (var transaction_id in archives_db) {
-			 	
-			 	if (!archives_db.hasOwnProperty(transaction_id)) { continue; }
-			    
-			 	keys_to_confirm.push( transaction_id );			  	
-			}
+					var status_updates = JSON.parse(response);
+
+					_publish(
+
+						"transactions-confirmed",
+						status_updates,
+						"confirmArchivedTransactions"
+					);
+				}
+
+			// get keys to confirm
+				for (var transaction_id in archives_db) {
+				 	
+				 	if (!archives_db.hasOwnProperty(transaction_id)) { continue; }
+				    
+				 	keys_to_confirm.push( transaction_id );			  	
+				}
 
 				keys_to_confirm = JSON.stringify( keys_to_confirm );
 
-				server_trip.open('POST', location.href + 'confirm-transaction.php', true);
-				server_trip.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-				server_trip.onreadystatechange = function(){
+			// send to server
+				imeiapp.network.POST(
 
-					if (server_trip.readyState==4 && server_trip.status==200){
+					location.href + 'confirm-transaction.php',
+					't=' + keys_to_confirm,
+					post_success
+				);
+		}
 
-						var status_updates = JSON.parse(server_trip.responseText);
+		// create POST request
+			imeiapp.network.POST = function(url, msg, success, fail){
 
-						_publish(
+				// filter
+					if (!url){ return false; }
 
-							"transactions-confirmed",
-							status_updates,
-							"confirmArchivedTransactions"
-						);
+				// reqs
+				var msg = msg || "",
+					success = success || function(response){ console.log("POST TO " + url + " SUCCESSFUL! \nRESPONSE: " + response ); },
+					fail = fail || function(response){ console.log("POST TO " + url + " UNSUCCESSFUL. \nXMLHTTP OBJECT:"); console.log(response); },
+					server_trip = new XMLHttpRequest();
+
+				// prep POST
+					server_trip.open('POST', url, true);
+					server_trip.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+					server_trip.onreadystatechange = function(){
+
+						// filter uncompleted responses
+							if (server_trip.readyState !=4){ return; }
+
+						// success
+							if ( server_trip.status > 199 && server_trip.status < 400 ){ success(server_trip.responseText); }
+
+						// fail
+							else{ fail(server_trip); }						
 					}
-				}
 
-				server_trip.send('t=' + keys_to_confirm);
+				// POST
+					server_trip.send(msg);
+
+				return true;	
 			}
 
 		// log result of send transaction
