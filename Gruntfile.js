@@ -3,11 +3,14 @@ module.exports = function(grunt) {
 	grunt.initConfig({
 		
 		pkg: grunt.file.readJSON('package.json'),
+		ftpcredentials: grunt.file.readJSON('.ftppass'),
 		dbcredentials: grunt.file.readJSON('dbcredentials.json'),
+
 		
 		buildDirectory: "svelte",
-		srcDirectory: "src",
 		prodDirectory: "prod",
+		srcDirectory: "src",
+
 		
 		uglify: {
 			
@@ -32,10 +35,10 @@ module.exports = function(grunt) {
 	            dest: '<%= buildDirectory %>/index.html',
 	            options: {
 	                scripts: {
-	                    core: '<%= srcDirectory %>/js/min/core.min.js'
+	                    core: ['<%= srcDirectory %>/js/min/core.min.js'],
 	                },
 	                styles: {
-	                    base: '<%= srcDirectory %>/css/min/base.min.css'
+	                    base: '<%= srcDirectory %>/css/min/base.min.css',
 	                },
 	                collapseWhitespace: true
 	            }
@@ -93,13 +96,13 @@ module.exports = function(grunt) {
 			production: {
 				
 				auth: {
-				  host: 's122241.gridserver.com',
-				  port: 21,
-				  authKey: 'mobius'
+				  authKey: 'mobius',
+				  host: '<%= ftpcredentials.mobius.host %>',
+				  port: '<%= ftpcredentials.mobius.port %>'
 				},
 
 				src: '<%= prodDirectory %>',
-				dest: '/domains/imeiapp.mizbeach.com/html'
+				dest: '<%= ftpcredentials.mobius.path %>'
 			}
 		},
 
@@ -186,6 +189,6 @@ module.exports = function(grunt) {
 		grunt.registerTask('prepHTML', ['htmlbuild']);
 		grunt.registerTask('prepManifest', ['manifest']);
 		grunt.registerTask('prepHTACCESS', ['copy:htaccess']);
-		grunt.registerTask('deploy', ['ftp-deploy:production']);
-		grunt.registerTask('build', ['prepManifest', 'prepCSS', 'prepJS', 'prepHTML', 'prepHTACCESS', 'prepPHP', 'copy:production']);
+		grunt.registerTask('deploy', ['build', 'ftp-deploy:production']);
+		grunt.registerTask('build', ['prepManifest', 'prepHTML', 'prepHTACCESS', 'prepPHP', 'copy:production']);
 };

@@ -1,0 +1,11 @@
+{
+	
+	"mobius": {
+
+		"username": "ftp_username",
+		"password": "ftp_password",		
+		"host": "ftp_host",
+		"port": "ftp_port",
+		"path": "ftp_path"
+	}
+}

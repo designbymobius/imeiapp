@@ -4,5 +4,5 @@ test
 svelte
 prod
 
-*.ftppass
+.ftppass
 dbcredentials.json
