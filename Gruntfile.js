@@ -3,9 +3,11 @@ module.exports = function(grunt) {
 	grunt.initConfig({
 		
 		pkg: grunt.file.readJSON('package.json'),
+		dbcredentials: grunt.file.readJSON('dbcredentials.json'),
 		
 		buildDirectory: "svelte",
 		srcDirectory: "src",
+		prodDirectory: "prod",
 		
 		uglify: {
 			
@@ -88,7 +90,7 @@ module.exports = function(grunt) {
 
         'ftp-deploy': {
 			
-			svelte: {
+			production: {
 				
 				auth: {
 				  host: 's122241.gridserver.com',
@@ -96,9 +98,8 @@ module.exports = function(grunt) {
 				  authKey: 'mobius'
 				},
 
-				src: '<%= buildDirectory %>',
-				dest: '/domains/designbymobi.us/html/imeiapp',
-				exclusions: ['<%= buildDirectory %>/css', '<%= buildDirectory %>/js']
+				src: '<%= prodDirectory %>',
+				dest: '/domains/imeiapp.mizbeach.com/html'
 			}
 		},
 
@@ -126,28 +127,50 @@ module.exports = function(grunt) {
 
 					processContent: function(content, srcpath){
 
-						// required variables
-							var srcRootDir = grunt.template.process("<%= srcDirectory %>");
-
-						// utils.php
-							if (srcpath == srcRootDir + "/utils.php"){								
-
-								// user name
-								content = content.replace("mobius", "db122241_mobius");
-								
-								// pass
-								content = content.replace("dimmy2", "faB0lous");
-
-								// db
-								content = content.replace("\"imeidb", "\"db122241_imeiapp");
-								
-								// host
-								content = content.replace("localhost", "internal-db.s122241.gridserver.com");
-							}
+						// process template
+							content = grunt.template.process(content);
 							
 						return content;
 					},
-				}		
+				}
+			},
+
+			production: {
+
+				files: [
+					{ expand: true, flatten: true, src: ['<%= buildDirectory %>/*.*'], dest: '<%= prodDirectory %>/', }
+				],
+
+				options: {
+
+					processContent: function(content, srcpath){						
+
+						// required variables
+							var buildRootDir = grunt.template.process("<%= buildDirectory %>");
+
+						// utils.php
+							if (srcpath == buildRootDir + "/utils.php"){
+
+								var dbcredentials = grunt.config.get("dbcredentials"),
+									prodDB = dbcredentials.production,
+									svelteDB = dbcredentials.svelte;
+
+								// user name
+								content = content.replace( svelteDB.user, prodDB.user);
+								
+								// pass
+								content = content.replace( svelteDB.password, prodDB.password);
+
+								// db
+								content = content.replace( svelteDB.database, prodDB.database);
+								
+								// host
+								content = content.replace( svelteDB.host, prodDB.host);
+							}
+
+						return content;
+					},
+				}
 			}
         }
 	});
@@ -166,7 +189,7 @@ module.exports = function(grunt) {
 		grunt.registerTask('prepCSS', ['cssmin']);
 		grunt.registerTask('prepPHP', ['copy:php']);
 		grunt.registerTask('prepHTACCESS', ['copy:htaccess']);
-		grunt.registerTask('deploySvelte', ['ftp-deploy:svelte']);
-		grunt.registerTask('build', ['htmlbuild', 'prepManifest']);
+		grunt.registerTask('deploy', ['ftp-deploy:production']);
 		grunt.registerTask('prepManifest', ['manifest', 'copy:manifest']);
+		grunt.registerTask('build', ['htmlbuild', 'prepManifest', 'copy:production']);
 };

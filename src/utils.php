@@ -3,11 +3,11 @@
 # -----------------------------------------------
 # CONSTANTS
 
-	define ("DB_USER", "mobius");
-	define ("DB_PASSWORD", "dimmy2");
-	define ("DB_HOST", "localhost");
+	define ("DB_USER", "<%= dbcredentials.svelte.user %>");
+	define ("DB_PASSWORD", "<%= dbcredentials.svelte.password %>");
+	define ("DB_HOST", "<%= dbcredentials.svelte.host %>");
 	
-	define ("DB_NAME", "imeidb");
+	define ("DB_NAME", "<%= dbcredentials.svelte.database %>");
 	define ("DB_IMEI_TABLE", "imei");
 	define ("DB_TRANSACTION_TABLE", "transaction");
 
