@@ -1,8 +1,8 @@
 node_modules
 test
 .grunt
-
-svelte/js
-svelte/css
+svelte
+prod
 
 *.ftppass
+dbcredentials.json
