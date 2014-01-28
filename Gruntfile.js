@@ -13,7 +13,7 @@ module.exports = function(grunt) {
 			
 			core_scripts: {
 				files: {
-					'<%= buildDirectory %>/js/core.min.js': ['<%= srcDirectory %>/js/pubsub.js', '<%= srcDirectory %>/js/sha1.js', '<%= srcDirectory %>/js/behavior.js', '<%= srcDirectory %>/js/app-init.js']
+					'<%= srcDirectory %>/js/min/core.min.js': ['<%= srcDirectory %>/js/offline.min.js','<%= srcDirectory %>/js/pubsub.js', '<%= srcDirectory %>/js/sha1.js', '<%= srcDirectory %>/js/behavior.js', '<%= srcDirectory %>/js/app-init.js']
 				}
 			}
 		},
@@ -21,7 +21,7 @@ module.exports = function(grunt) {
 		cssmin: {
 			minify: {
 				src: '<%= srcDirectory %>/css/base.css',
-				dest: '<%= buildDirectory %>/css/base.min.css'
+				dest: '<%= srcDirectory %>/css/min/base.min.css'
 			}
 		},
 
@@ -32,10 +32,10 @@ module.exports = function(grunt) {
 	            dest: '<%= buildDirectory %>/index.html',
 	            options: {
 	                scripts: {
-	                    core: ['<%= srcDirectory %>/js/offline.min.js','<%= buildDirectory %>/js/core.min.js']
+	                    core: '<%= srcDirectory %>/js/min/core.min.js'
 	                },
 	                styles: {
-	                    base: '<%= buildDirectory %>/css/base.min.css'
+	                    base: '<%= srcDirectory %>/css/min/base.min.css'
 	                },
 	                collapseWhitespace: true
 	            }
@@ -47,7 +47,7 @@ module.exports = function(grunt) {
 			generate: {
 				
 				options: {
-					basePath:"<%= srcDirectory %>/",
+					basePath:"<%= buildDirectory %>/",
 					fallback: ["/ index.html"],
 					network: ["*", "server-check.php", "process-transaction.php", "confirm-transaction.php"],	
 					preferOnline: true,
@@ -55,7 +55,7 @@ module.exports = function(grunt) {
 			        verbose: false,
 				},
 				src: ['index.html'],
-				dest: '<%= srcDirectory %>/manifest.appcache'
+				dest: '<%= buildDirectory %>/manifest.appcache'
 			}
 		},
 
@@ -63,7 +63,7 @@ module.exports = function(grunt) {
 
             php: {
               files: ['<%= srcDirectory %>/*.php'], 
-              tasks: ['copy:php'],
+              tasks: ['copy:php', 'copy:production'],
             },
 
             js: {
@@ -72,7 +72,7 @@ module.exports = function(grunt) {
             },
             
             css: {
-              files: ['<%= srcDirectory %>/css/base.css'], 
+              files: ['<%= srcDirectory %>/css/*.css'], 
               tasks: ['prepCSS', 'build'],
             },
             
@@ -111,12 +111,6 @@ module.exports = function(grunt) {
 			    ]
 			},
 
-			manifest: {
-			    files: [ 
-			    	{ expand: true, flatten: true, src: ['<%= srcDirectory %>/manifest.appcache'], dest: '<%= buildDirectory %>/'} 
-			    ]
-			},
-
 			php: { 
 				
 				files: [
@@ -138,7 +132,8 @@ module.exports = function(grunt) {
 			production: {
 
 				files: [
-					{ expand: true, flatten: true, src: ['<%= buildDirectory %>/*.*'], dest: '<%= prodDirectory %>/', }
+					{ expand: true, flatten: true, src: ['<%= buildDirectory %>/*.*'], dest: '<%= prodDirectory %>/', },
+					{ expand: true, flatten: true, src: ['<%= buildDirectory %>/.*'], dest: '<%= prodDirectory %>/', }
 				],
 
 				options: {
@@ -188,8 +183,9 @@ module.exports = function(grunt) {
 		grunt.registerTask('prepJS', ['uglify']);
 		grunt.registerTask('prepCSS', ['cssmin']);
 		grunt.registerTask('prepPHP', ['copy:php']);
+		grunt.registerTask('prepHTML', ['htmlbuild']);
+		grunt.registerTask('prepManifest', ['manifest']);
 		grunt.registerTask('prepHTACCESS', ['copy:htaccess']);
 		grunt.registerTask('deploy', ['ftp-deploy:production']);
-		grunt.registerTask('prepManifest', ['manifest', 'copy:manifest']);
-		grunt.registerTask('build', ['htmlbuild', 'prepManifest', 'copy:production']);
+		grunt.registerTask('build', ['prepManifest', 'prepCSS', 'prepJS', 'prepHTML', 'prepHTACCESS', 'prepPHP', 'copy:production']);
 };
