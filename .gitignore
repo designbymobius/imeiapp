@@ -3,6 +3,7 @@ test
 .grunt
 svelte
 prod
+debug
 
 .ftppass
 dbcredentials.json

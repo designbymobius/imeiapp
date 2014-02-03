@@ -6,17 +6,24 @@ module.exports = function(grunt) {
 		ftpcredentials: grunt.file.readJSON('.ftppass'),
 		dbcredentials: grunt.file.readJSON('dbcredentials.json'),
 
-		
 		buildDirectory: "svelte",
+		debugDirectory: "debug",
 		prodDirectory: "prod",
 		srcDirectory: "src",
 
+		coreJS: [
+			'<%= srcDirectory %>/js/offline.min.js',
+			'<%= srcDirectory %>/js/pubsub.js', 
+			'<%= srcDirectory %>/js/sha1.js', 
+			'<%= srcDirectory %>/js/behavior.js', 
+			'<%= srcDirectory %>/js/app-init.js'
+		],
 		
 		uglify: {
 			
 			core_scripts: {
 				files: {
-					'<%= srcDirectory %>/js/min/core.min.js': ['<%= srcDirectory %>/js/offline.min.js','<%= srcDirectory %>/js/pubsub.js', '<%= srcDirectory %>/js/sha1.js', '<%= srcDirectory %>/js/behavior.js', '<%= srcDirectory %>/js/app-init.js']
+					'<%= srcDirectory %>/js/min/core.min.js': '<%= coreJS %>'
 				}
 			}
 		},
@@ -35,12 +42,25 @@ module.exports = function(grunt) {
 	            dest: '<%= buildDirectory %>/index.html',
 	            options: {
 	                scripts: {
-	                    core: ['<%= srcDirectory %>/js/min/core.min.js'],
+	                    core: '<%= srcDirectory %>/js/min/core.min.js',
 	                },
 	                styles: {
 	                    base: '<%= srcDirectory %>/css/min/base.min.css',
 	                },
 	                collapseWhitespace: true
+	            }
+	        },
+
+	        debug: {
+	            src: '<%= srcDirectory %>/index.html',
+	            dest: '<%= debugDirectory %>/index.html',
+	            options: {
+	                scripts: {
+	                    core: '<%= coreJS %>',
+	                },
+	                styles: {
+	                    base: '<%= srcDirectory %>/css/min/base.min.css',
+	                }
 	            }
 	        }
 	    },
@@ -110,14 +130,16 @@ module.exports = function(grunt) {
 
 			htaccess: {
 			    files: [ 
-			    	{ expand: true, flatten: true, src: ['<%= srcDirectory %>/.htaccess'], dest: '<%= buildDirectory %>/'} 
-			    ]
+			    	{ expand: true, flatten: true, src: ['<%= srcDirectory %>/.htaccess'], dest: '<%= buildDirectory %>/'}, 
+			    	{ expand: true, flatten: true, src: ['<%= srcDirectory %>/.htaccess'], dest: '<%= debugDirectory %>/'} 
+			    ],
 			},
 
 			php: { 
 				
 				files: [
-					{ expand: true, flatten: true, src: ['<%= srcDirectory %>/*.php'], dest: '<%= buildDirectory %>/', }
+					{ expand: true, flatten: true, src: ['<%= srcDirectory %>/*.php'], dest: '<%= buildDirectory %>/', },
+					{ expand: true, flatten: true, src: ['<%= srcDirectory %>/*.php'], dest: '<%= debugDirectory %>/', }
 				],
 
 				options: {
