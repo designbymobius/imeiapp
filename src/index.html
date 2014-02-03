@@ -26,12 +26,11 @@
 
 		<div id="step-1" class="fullscreen">
 			
-			<div class="headline">Step 1: Add Device IMEIs to Invoice <span class="invoiceNumber">OT0624</span></div>
+			<div class="headline">Step 1: Collect Device IMEIs</div>
 			<div class="subtext">Enter the IMEI and click 'Save IMEI' to add the device to Invoice <span class="invoiceNumber"></span>. Next Step will not appear until at least 1 IMEI has been added </div>
 
 			<input id="IMEI" placeholder="Insert Device IMEI Number Here">
 
-			<div class="editInvoiceNumber">&larr; Back</div>
 			<div id="editSavedIMEIs">Edit (<span class="imeiTally">0</span>)</div>
 			<div id="addIMEItoInvoice">Save IMEI</div>
 			<div id="reviewInvoice" class="progress">Next Step</div>	
@@ -46,6 +45,7 @@
 
 			<input id="invoice" placeholder="Touch Me to Enter the Invoice Number">
 			
+			<div class="previousStep">&larr; Back</div>
 			<div id="addIMEI" class="progress">Next Step</div>	
 			
 		</div>
@@ -56,7 +56,7 @@
 			<div class="title">Confirm the attached IMEIs are correct. Click on the incorrect ones to edit them</div>
 			<div id="imeiReviewList" class="subtext"></div>
 			<div class="controls-wrapper">				
-				<div class="editInvoiceAttachments">&larr; Back</div>
+				<div class="previousStep">&larr; Back</div>
 			</div>
 			<div id="finish-registration">Complete Registration</div>	
 		</div>

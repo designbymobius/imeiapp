@@ -24,14 +24,13 @@
 	imeiapp.network.intervals = {};
 
 // DOM Elements
+	imeiapp.DOM["backBtn"] = document.getElementsByClassName('previousStep');
 	imeiapp.DOM["startRegistration"] = document.getElementById("start-registration");
 	imeiapp.DOM["cancelRegistration"] = document.getElementsByClassName('restart');
 	imeiapp.DOM["connectionIndicator"] = document.getElementsByClassName('connection-indicator');
-	imeiapp.DOM["editInvoiceNumber"] = document.getElementsByClassName('editInvoiceNumber');
 	imeiapp.DOM["invoiceNumberSlots"] = document.getElementsByClassName('invoiceNumber');
 	imeiapp.DOM["IMEIsForReview"] = document.getElementsByClassName('imeiForReview');
 	imeiapp.DOM["imeiTallySlots"] = document.getElementsByClassName('imeiTally');
-	imeiapp.DOM["editInvoiceAttachments"] = document.getElementsByClassName('editInvoiceAttachments');
 	imeiapp.DOM["editSavedIMEIs"] = document.getElementById('editSavedIMEIs');
 	imeiapp.DOM["invoice"] = document.getElementById('invoice');
 	imeiapp.DOM["IMEI"] = document.getElementById('IMEI');
@@ -475,6 +474,16 @@
 		    	imeiapp.pubsub.publish("save-registration", null, this);
 		    });
 
+		// Activate Previous Screen Buttons
+			for (var i = imeiapp.DOM["backBtn"].length - 1; i >= 0; i--) {
+				
+				imeiapp.DOM["backBtn"][i].addEventListener("click", function(){
+
+					imeiapp.stats.step = imeiapp.stats.step - 1;
+					imeiapp.utils.gotoScreen(imeiapp.stats.step);
+				});
+			};
+
 		// Recalculate Tally of IMEIs attached to Current Invoice
 			imeiapp.utils.savedIMEIsTally = function(){
 
@@ -514,23 +523,7 @@
 			 		imeiapp.pubsub.publish("cancel-registration", null, this);
 			 	});
 			 };
-
-		// .editInvoiceNumber -> Step 1
-			for (var i = imeiapp.DOM["editInvoiceNumber"].length - 1; i >= 0; i--) {
-			 	imeiapp.DOM["editInvoiceNumber"][i].addEventListener("click", function(){
-
-			 		imeiapp.pubsub.publish("edit-invoice", null, this);
-			 	});
-			 };	
-
-		// .editInvoiceAttachments -> Step 2
-			for (var i = imeiapp.DOM["editInvoiceAttachments"].length - 1; i >= 0; i--) {
-			 	imeiapp.DOM["editInvoiceAttachments"][i].addEventListener("click", function(){
-
-			 		imeiapp.pubsub.publish("edit-invoice-attachments", null, this);
-			 	});
-			 };	
-
+			 	
 		// debounced resize util -> Window Size Change
 			imeiapp.utils.onResize(function(){
 

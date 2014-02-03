@@ -187,7 +187,7 @@ body #app-hud .connection-indicator.connection-checking {
 	width: 80%;
 }
 
-.restart, .editInvoiceNumber, #addIMEItoInvoice, #editSavedIMEIs, .editInvoiceAttachments {
+#addIMEItoInvoice, #editSavedIMEIs, .previousStep, .restart {
 
 	text-transform: uppercase;
 	font-size: .75em;
@@ -207,7 +207,7 @@ body #app-hud .connection-indicator.connection-checking {
 
 }
 
-.editInvoiceNumber, .editInvoiceAttachments {
+.previousStep {
 
 	color: red;
 	margin-left: 2.75em;
