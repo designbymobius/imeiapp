@@ -18,6 +18,10 @@ module.exports = function(grunt) {
 			'<%= srcDirectory %>/js/behavior.js', 
 			'<%= srcDirectory %>/js/app-init.js'
 		],
+
+		coreCSS: [
+			'<%= srcDirectory %>/css/base.css'
+		],
 		
 		uglify: {
 			
@@ -30,7 +34,7 @@ module.exports = function(grunt) {
 
 		cssmin: {
 			minify: {
-				src: '<%= srcDirectory %>/css/base.css',
+				src: '<%= coreCSS %>',
 				dest: '<%= srcDirectory %>/css/min/base.min.css'
 			}
 		},
@@ -59,7 +63,7 @@ module.exports = function(grunt) {
 	                    core: '<%= coreJS %>',
 	                },
 	                styles: {
-	                    base: '<%= srcDirectory %>/css/min/base.min.css',
+	                    base: '<%= coreCSS %>',
 	                }
 	            }
 	        }
@@ -132,6 +136,12 @@ module.exports = function(grunt) {
 			    files: [ 
 			    	{ expand: true, flatten: true, src: ['<%= srcDirectory %>/.htaccess'], dest: '<%= buildDirectory %>/'}, 
 			    	{ expand: true, flatten: true, src: ['<%= srcDirectory %>/.htaccess'], dest: '<%= debugDirectory %>/'} 
+			    ],
+			},
+
+			manifest: {
+			    files: [ 
+			    	{ expand: true, flatten: true, src: ['<%= buildDirectory %>/manifest.appcache'], dest: '<%= debugDirectory %>/'}
 			    ],
 			},
 
@@ -212,5 +222,5 @@ module.exports = function(grunt) {
 		grunt.registerTask('prepManifest', ['manifest']);
 		grunt.registerTask('prepHTACCESS', ['copy:htaccess']);
 		grunt.registerTask('deploy', ['build', 'ftp-deploy:production']);
-		grunt.registerTask('build', ['prepManifest', 'prepHTML', 'prepHTACCESS', 'prepPHP', 'copy:production']);
+		grunt.registerTask('build', ['prepManifest', 'prepHTML', 'prepHTACCESS', 'prepPHP', 'copy:production', 'copy:manifest']);
 };
