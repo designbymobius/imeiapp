@@ -25,6 +25,7 @@
 
 // DOM Elements
 	imeiapp.DOM["backBtn"] = document.getElementsByClassName('previousStep');
+	imeiapp.DOM["nextBtn"] = document.getElementsByClassName('progress');
 	imeiapp.DOM["startRegistration"] = document.getElementById("start-registration");
 	imeiapp.DOM["cancelRegistration"] = document.getElementsByClassName('restart');
 	imeiapp.DOM["connectionIndicator"] = document.getElementsByClassName('connection-indicator');
@@ -34,7 +35,6 @@
 	imeiapp.DOM["editSavedIMEIs"] = document.getElementById('editSavedIMEIs');
 	imeiapp.DOM["invoice"] = document.getElementById('invoice');
 	imeiapp.DOM["IMEI"] = document.getElementById('IMEI');
-	imeiapp.DOM["addIMEI"] = document.getElementById('addIMEI');
 	imeiapp.DOM["saveIMEI"] = document.getElementById('addIMEItoInvoice');
 	imeiapp.DOM["reviewInvoice"] = document.getElementById('reviewInvoice');
 	imeiapp.DOM["imeiReviewList"] = document.getElementById('imeiReviewList');
@@ -444,12 +444,6 @@
 		    	imeiapp.pubsub.publish("start-registration", null, this);
 		    });
 
-		// #start-registration -> Start Registration
-		    imeiapp.DOM["addIMEI"].addEventListener("click", function(){
-
-		    	imeiapp.pubsub.publish("add-imei", null, this);
-		    });
-
 		// #saveIMEI -> Save Current IMEI
 		    imeiapp.DOM["saveIMEI"].addEventListener("click", function(){
 
@@ -474,13 +468,21 @@
 		    	imeiapp.pubsub.publish("save-registration", null, this);
 		    });
 
-		// Activate Previous Screen Buttons
+		// Activate Back Buttons
 			for (var i = imeiapp.DOM["backBtn"].length - 1; i >= 0; i--) {
 				
 				imeiapp.DOM["backBtn"][i].addEventListener("click", function(){
 
-					imeiapp.stats.step = imeiapp.stats.step - 1;
-					imeiapp.utils.gotoScreen(imeiapp.stats.step);
+					imeiapp.utils.gotoScreen(imeiapp.stats.step - 1);
+				});
+			};
+
+		// Activate Next Buttons
+			for (var i = imeiapp.DOM["backBtn"].length - 1; i >= 0; i--) {
+				
+				imeiapp.DOM["nextBtn"][i].addEventListener("click", function(){
+
+					imeiapp.utils.gotoScreen(imeiapp.stats.step + 1);
 				});
 			};
 
@@ -575,7 +577,7 @@
 							imeiapp.DOM["invoiceNumberSlots"][i].innerHTML = "#" + imeiapp.DOM["invoice"].value; 
 						};
 
-					imeiapp.utils.gotoScreen(2);
+					imeiapp.utils.gotoScreen(imeiapp.stats.step + 1);
 					imeiapp.DOM["IMEI"].focus();
 				},
 				null
@@ -836,7 +838,7 @@
 	// Enter Key Submits Invoice Number -> Invoice Number Field
 		imeiapp.DOM['invoice'].addEventListener('keydown', function(e){
 
-			if (e.keyCode == 13){ imeiapp.DOM['addIMEI'].click(); };
+			if (e.keyCode == 13){ /* do something here */ };
 		});
 
 	// Enter Key Saves IMEI -> IMEI Field
