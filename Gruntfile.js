@@ -2,6 +2,8 @@ module.exports = function(grunt) {
   
 	grunt.initConfig({
 		
+		// REQUIRED VARIABLES
+
 		pkg: grunt.file.readJSON('package.json'),
 		ftpcredentials: grunt.file.readJSON('.ftppass'),
 		dbcredentials: grunt.file.readJSON('dbcredentials.json'),
@@ -22,6 +24,18 @@ module.exports = function(grunt) {
 		coreCSS: [
 			'<%= srcDirectory %>/css/base.css'
 		],
+
+		// TASK CONFIGURATIONS
+
+		jshint: {
+			beforeconcat: '<%= coreJS %>',
+			afterconcat: '<%= srcDirectory %>/js/min/core.min.js',
+			options: {
+
+				browser: true,
+				devel: true
+			}
+		},
 		
 		uglify: {
 			
@@ -206,6 +220,7 @@ module.exports = function(grunt) {
 	});
 
 	// Load plugins
+		grunt.loadNpmTasks('grunt-contrib-jshint');
 		grunt.loadNpmTasks('grunt-contrib-uglify');
 		grunt.loadNpmTasks('grunt-contrib-cssmin'); 
 		grunt.loadNpmTasks('grunt-contrib-watch');
@@ -215,12 +230,12 @@ module.exports = function(grunt) {
 		grunt.loadNpmTasks('grunt-manifest');
 
 	// Register Tasks
-		grunt.registerTask('prepJS', ['uglify']);
 		grunt.registerTask('prepCSS', ['cssmin']);
 		grunt.registerTask('prepPHP', ['copy:php']);
 		grunt.registerTask('prepHTML', ['htmlbuild']);
 		grunt.registerTask('prepManifest', ['manifest']);
 		grunt.registerTask('prepHTACCESS', ['copy:htaccess']);
 		grunt.registerTask('deploy', ['build', 'ftp-deploy:production']);
+		grunt.registerTask('prepJS', ['jshint:beforeconcat','uglify','jshint:afterconcat']);
 		grunt.registerTask('build', ['prepManifest', 'prepHTML', 'prepHTACCESS', 'prepPHP', 'copy:production', 'copy:manifest']);
 };
