@@ -28,13 +28,19 @@ module.exports = function(grunt) {
 		// TASK CONFIGURATIONS
 
 		jshint: {
-			beforeconcat: '<%= coreJS %>',
-			afterconcat: '<%= srcDirectory %>/js/min/core.min.js',
+
 			options: {
 
+				'-W030': true,
+				'-W033': true,
+				devel: true,
 				browser: true,
-				devel: true
-			}
+				loopfunc: true,
+				lastsemic: true,
+				ignores: ['<%= srcDirectory %>/js/offline.min.js','<%= srcDirectory %>/js/sha1.js']
+			},
+
+			beforeconcat: '<%= coreJS %>'
 		},
 		
 		uglify: {
@@ -236,6 +242,6 @@ module.exports = function(grunt) {
 		grunt.registerTask('prepManifest', ['manifest']);
 		grunt.registerTask('prepHTACCESS', ['copy:htaccess']);
 		grunt.registerTask('deploy', ['build', 'ftp-deploy:production']);
-		grunt.registerTask('prepJS', ['jshint:beforeconcat','uglify','jshint:afterconcat']);
+		grunt.registerTask('prepJS', ['jshint:beforeconcat','uglify']);
 		grunt.registerTask('build', ['prepManifest', 'prepHTML', 'prepHTACCESS', 'prepPHP', 'copy:production', 'copy:manifest']);
 };

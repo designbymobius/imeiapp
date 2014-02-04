@@ -61,7 +61,7 @@ var pubsub = pubsub || {};
 			return;
 		}
 
-		var publisher = publisher || "unidentified";
+		publisher = publisher || "unidentified";
 		
 		// get list of subscribers
 		var subscriberList = dxm.notification.subscribers[notification];
