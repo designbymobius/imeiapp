@@ -2,6 +2,7 @@
 	imeiapp = {},
 	
 // Variable Declarations
+	imeiapp.ui = {},
     imeiapp.DOM = {},
     imeiapp.utils = {},
     imeiapp.stats = {},
@@ -25,7 +26,7 @@
 
 // DOM Elements
 	imeiapp.DOM["backBtn"] = document.getElementsByClassName('previousStep');
-	imeiapp.DOM["nextBtn"] = document.getElementsByClassName('progress');
+	imeiapp.DOM["nextBtn"] = document.getElementsByClassName('nextStep');
 	imeiapp.DOM["startRegistration"] = document.getElementById("start-registration");
 	imeiapp.DOM["cancelRegistration"] = document.getElementsByClassName('restart');
 	imeiapp.DOM["connectionIndicator"] = document.getElementsByClassName('connection-indicator');
@@ -36,10 +37,37 @@
 	imeiapp.DOM["invoice"] = document.getElementById('invoice');
 	imeiapp.DOM["IMEI"] = document.getElementById('IMEI');
 	imeiapp.DOM["saveIMEI"] = document.getElementById('addIMEItoInvoice');
-	imeiapp.DOM["reviewInvoice"] = document.getElementById('reviewInvoice');
 	imeiapp.DOM["imeiReviewList"] = document.getElementById('imeiReviewList');
 	imeiapp.DOM["completeRegistration"] = document.getElementById('finish-registration');
 	imeiapp.DOM["screens"] = document.getElementsByClassName('fullscreen');
+
+// # UI
+	
+	// Fade Out Screen
+		imeiapp.ui.activateScreen = function(index){
+
+			// req vars
+			var _app = imeiapp,
+				
+				_screens = _app.DOM['screens'],				
+				_addClass = _app.utils.addClass;
+
+			// activate
+				_addClass( _screens[ index ], "active" );
+		}
+
+	// Deactivate Active Screen
+		imeiapp.ui.deactivateScreen = function(index){
+
+			// req vars
+			var _app = imeiapp,
+							
+				_screens = _app.DOM['screens'],				
+				_removeClass = _app.utils.removeClass;
+
+			// activate
+				_removeClass( _screens[ index ], "active" );
+		}
 
 // # UTILS
 
@@ -121,7 +149,7 @@
 			  }
 
 			  return utftext;
-			}
+		}
 
 	// EaseInOut Animation Formula 
 		imeiapp.utils.easeInOutQuad = function(t, b, c, d) {
@@ -130,7 +158,7 @@
 			if (t < 1) return c/2*t*t + b;
 			t--;
 			return -c/2 * (t*(t-2) - 1) + b;
-		};
+		}
 
 	// Debounce Window Resizes
 		imeiapp.utils.onResize = function(c,t){onresize=function(){clearTimeout(t);t=setTimeout(c,250)};return c};
@@ -421,6 +449,7 @@
 		    function step() {
 		      var y;
 		      factor = (Date.now() - start) / duration; // get interpolation factor
+		      
 		      if( factor >= 1 ) {
 		        clearInterval(timer); // stop animation
 		        factor = 1;           // clip to max 1.0
@@ -435,14 +464,15 @@
 		  };
 		}());
 
+	// Scroll to Active Screen
+		imeiapp.animate.scrollToActiveScreen = function(){
+
+			imeiapp.animate.scrollTo( imeiapp.DOM.screens[imeiapp.stats.step].offsetTop );
+		}
+
 // # PUBSUB
 	
 	// Publish
-		// #start-registration -> Start Registration
-		    imeiapp.DOM["startRegistration"].addEventListener("click", function(){
-
-		    	imeiapp.pubsub.publish("start-registration", null, this);
-		    });
 
 		// #saveIMEI -> Save Current IMEI
 		    imeiapp.DOM["saveIMEI"].addEventListener("click", function(){
@@ -456,35 +486,11 @@
 		    	imeiapp.pubsub.publish("edit-imei", null, this);
 		    });
 
-		// #reviewInvoice -> Final Step
-		    imeiapp.DOM["reviewInvoice"].addEventListener("click", function(){
-
-		    	imeiapp.pubsub.publish("reviewInvoice", null, this);
-		    });
-
 		// #finish-registration -> Save Invoice
 		    imeiapp.DOM["completeRegistration"].addEventListener("click", function(){
 
 		    	imeiapp.pubsub.publish("save-registration", null, this);
 		    });
-
-		// Activate Back Buttons
-			for (var i = imeiapp.DOM["backBtn"].length - 1; i >= 0; i--) {
-				
-				imeiapp.DOM["backBtn"][i].addEventListener("click", function(){
-
-					imeiapp.utils.gotoScreen(imeiapp.stats.step - 1);
-				});
-			};
-
-		// Activate Next Buttons
-			for (var i = imeiapp.DOM["backBtn"].length - 1; i >= 0; i--) {
-				
-				imeiapp.DOM["nextBtn"][i].addEventListener("click", function(){
-
-					imeiapp.utils.gotoScreen(imeiapp.stats.step + 1);
-				});
-			};
 
 		// Recalculate Tally of IMEIs attached to Current Invoice
 			imeiapp.utils.savedIMEIsTally = function(){
@@ -533,19 +539,6 @@
 			});
 
 	// Subscribe
-		// Step 0 -> Start Registration
-			imeiapp.pubsub.subscribe(
-
-				'start-registration', 
-				'step-0',
-				function(){
-
-					imeiapp.utils.gotoScreen(1);
-					imeiapp.DOM["invoice"].focus();
-				},
-				null
-			);
-
 		// Step 1 -> Add IMEI
 			imeiapp.pubsub.subscribe(
 
@@ -630,9 +623,10 @@
 			imeiapp.pubsub.subscribe(
 
 				'imei-tally',
-				'step-2-progress-btn',
-				
+				'step-2-progress-btn',				
 				function(){
+
+					/*
 
 					var btn = imeiapp.DOM['reviewInvoice'];
 					var addClass = imeiapp.utils.addClass;
@@ -647,6 +641,8 @@
 						removeClass(btn, "active"); 
 					}
 
+					*/
+
 				},
 				null
 			);
@@ -655,8 +651,7 @@
 			imeiapp.pubsub.subscribe(
 
 				'imei-tally',
-				'tally-slots-updater',
-				
+				'tally-slots-updater',				
 				function(){
 
 					var tallySlots = imeiapp.DOM['imeiTallySlots'];
@@ -803,18 +798,23 @@
 					imeiapp.DOM.setScreensHeight();
 				},
 				null
-				);
+			);
 
 	    // Scroll on Resize
 	    	imeiapp.pubsub.subscribe(
 	    		'screensResized', 
 	    		'autoScroller',
-	    		function(){
-
-					imeiapp.animate.scrollTo(imeiapp.DOM.screens[imeiapp.stats.step].offsetTop);
-				},
+	    		imeiapp.animate.scrollToActiveScreen,
 				null
-				);
+			);
+
+	    // Scroll on Resize
+	    	imeiapp.pubsub.subscribe(
+	    		'screen-setup-complete', 
+	    		'autoScroller',
+	    		imeiapp.animate.scrollToActiveScreen,
+				null
+			);
 
 	    // Activated Screen Height Fixer
 	    	imeiapp.pubsub.subscribe(
@@ -827,152 +827,343 @@
 				null
 				);
 
-// # GENERAL
+		// log result of send transaction
+			imeiapp.pubsub.subscribe(
 
-	// Disable Touch Scrolling
-		document.addEventListener('touchmove', function(e){
+				"server-acknowledged-transaction",
+				"console.log",
+				function(metadata){
 
-			e.preventDefault();
-		});
+					var server_id = metadata.notificationParams.server_transaction_id;
+					var client_id = metadata.notificationParams.client_transaction_id;
 
-	// Enter Key Submits Invoice Number -> Invoice Number Field
-		imeiapp.DOM['invoice'].addEventListener('keydown', function(e){
+					if (server_id == client_id){
 
-			if (e.keyCode == 13){ /* do something here */ };
-		});
+						console.log("server received transaction " + server_id );
 
-	// Enter Key Saves IMEI -> IMEI Field
-		imeiapp.DOM['IMEI'].addEventListener('keydown', function(e){
-
-			if (e.keyCode == 13){ imeiapp.DOM['saveIMEI'].click(); };
-		});  
-
-	// Force Screens to Full Window Height
-		imeiapp.DOM.setScreensHeight = function(){
-
-			for (var i = imeiapp.DOM.screens.length - 1; i >= 0; i--) {
-
-				if (i < imeiapp.stats.step) { break; }
-				
-				imeiapp.DOM.screens[i].style.height = window.innerHeight + "px"; 
-			};
-
-			imeiapp.pubsub.publish('screensResized', null, 'screenResizer')
-		}
-
-    // Deactivate Active Screen
-    	imeiapp.utils.deactivateActiveScreen = function(){
-
-    		imeiapp.utils.removeClass( imeiapp.DOM.screens[imeiapp.stats.step], 'active' );
-    	}
-
-    // Activate Screen
-    	imeiapp.utils.activateScreen = function(screen){ imeiapp.utils.addClass( screen, 'active'); }
-
-    // Go To Screen
-    	imeiapp.utils.gotoScreen = function(index, duration){
-
-    		var duration = duration || 400;
-
-    		// Deactivate Current Screen
-				imeiapp.utils.deactivateActiveScreen();
-
-			// Set Step
-				imeiapp.stats.step = index;
-
-			// Set Screen
-				var screen = imeiapp.DOM.screens[imeiapp.stats.step];
-
-			// Activate New Screen
-				imeiapp.utils.activateScreen( screen );
-
-			// Scroll to Screen 			
-				imeiapp.animate.scrollTo( screen.offsetTop, duration );
-
-				setTimeout(function(){ imeiapp.pubsub.publish("gotToScreen", null, "gotoScreen"); }, duration + 10);
-    	}
-
-    // Update IMEI List
-    	imeiapp.utils.updateListOfIMEIs = function(){
-
-    		var imeiList = imeiapp.DOM["imeiReviewList"],
-    			entries = "";
-
-    		imeiList.innerHTML = "";
-
-    		for (var i = 0; i < imeiapp.currentInvoice.imeis.length; i++) {
-    			var entries = entries + "<span class='imeiForReview'>" + imeiapp.currentInvoice.imeis[i] + "</span>" + (i < imeiapp.currentInvoice.imeis.length - 1 ? " | " : "");
-    		};
-
-    		imeiList.innerHTML = entries;
-
-    		imeiapp.DOM.activateIMEIsForReview();
-    	}
-
-    	imeiapp.utils.reviewIMEI = function(index){
-
-    		if (index < 0){ console.log("no index given to review for reviewIMEI()"); return; }
-
-			// Base Variables				
-				var imei = imeiapp.currentInvoice.imeis[index];
-				var requestEdit = confirm( "Is this IMEI (" + imei + ") Correct?");
-				
-				if(requestEdit !== true){
-
-					var oldimei = imei;
-					var newimei = prompt("Submit the Correct IMEI to Update or Submit a Blank Field to Delete '" + oldimei + "'", oldimei);
-
-					var replaceIMEI = function(){
-
-						imeiapp.currentInvoice.imeis[index] = newimei;
-						alert("'" + oldimei + "' has been replaced with '" + newimei + "'");
 					}
 
-					var noChangeAnnouncement = function(){
+					else { 
+
+						console.log("something went wrong: client and server id don't match");
+						console.log(metadata.notificationParams);
+					}
+				},
+				null
+			);
+
+		// screen-0-setup
+			imeiapp.pubsub.subscribe(
+
+				"screen-0-setup",
+				"handyman",
+				function(){
+
+					// req vars
+					var _app = imeiapp,
 						
-						alert("'" + oldimei + "' has not been changed or deleted");
-					}
+						_pubsub = _app.pubsub,
+						_publish = _pubsub.publish,
+						_subscribe = _pubsub.subscribe,
+						_unsubscribe = _pubsub.unsubscribe,
 
-					var confirmDeleteRequest = function(){
+						index = 0,
 
-						var requestDelete = confirm("Are you sure you want to delete '" + oldimei + "'?");
+						startRegistration = function(){
 
-						if (requestDelete !== true){
+					    	imeiapp.utils.gotoNextScreen();
+					    },
 
-							alert("'" + oldimei + "' has not been deleted or modified");
-							return;
+					    mapEnterBtnToNextStep = function(event){
+
+					    	if(event.keyCode == 13){
+
+					    		imeiapp.DOM["startRegistration"].click();
+							}
+					    },
+
+					    screenSetup = function(){
+
+							// activate start registration button
+							    imeiapp.DOM["startRegistration"].addEventListener("click", startRegistration);
+
+							// set enter to progress screen
+								window.addEventListener("keydown", mapEnterBtnToNextStep);
+
+							// ready visuals
+								imeiapp.ui.activateScreen( index );
+
+							// screen setup complete
+								_publish("screen-setup-complete", null, "screen-" + index + "-setup");
+					    },
+
+					    screenTeardown = function(){
+
+					    	// deactivate Start Registration Btn
+					    		imeiapp.DOM["startRegistration"].removeEventListener("click", startRegistration);
+
+							// unmap progress screen
+								window.removeEventListener("keydown", mapEnterBtnToNextStep);
+
+							// disable visuals					    	
+								imeiapp.ui.deactivateScreen( index );
+					    };
+
+					// do setup
+						screenSetup();
+
+					// listen for teardown
+						_subscribe(
+
+							"screen-teardown",
+							"screen-0-setup",
+							function(){
+
+								// do teardown
+									screenTeardown();
+
+								// unsubscribe from tear-down list
+									_unsubscribe("screen-teardown", "screen-0-setup");
+							},
+							null
+						);
+
+				},
+				null
+			);
+
+		// screen-0-setup
+			imeiapp.pubsub.subscribe(
+
+				"screen-1-setup",
+				"handyman",
+				function(){
+
+					// req vars
+					var _app = imeiapp,
+						
+						_pubsub = _app.pubsub,
+						_publish = _pubsub.publish,
+						_subscribe = _pubsub.subscribe,
+						_unsubscribe = _pubsub.unsubscribe,
+
+						index = 1,
+
+						startRegistration = function(){
+
+					    	imeiapp.utils.gotoNextScreen();
+					    },
+
+					    screenSetup = function(){
+
+							// ready visuals
+								imeiapp.ui.activateScreen( index );
+
+							// set focus on input field
+								imeiapp.DOM["IMEI"].focus();
+
+							// screen setup complete
+								_publish("screen-setup-complete", null, "screen-" + index + "-setup");
+					    },
+
+					    screenTeardown = function(){
+					    	
+							// disable visuals					    	
+								imeiapp.ui.deactivateScreen( index );
+					    };
+
+					// do setup
+						screenSetup();
+
+					// listen for teardown
+						_subscribe(
+
+							"screen-teardown",
+							"screen-" + index + "-setup",
+							function(){
+
+								// do teardown
+									screenTeardown();
+
+								// unsubscribe from tear-down list
+									_unsubscribe("screen-teardown", "screen-" + index + "-setup");
+							},
+							null
+						);
+
+				},
+				null
+			);
+
+	// # GENERAL
+
+		// Disable Touch Scrolling
+			document.addEventListener('touchmove', function(e){
+
+				e.preventDefault();
+			});
+
+		// Enter Key Submits Invoice Number -> Invoice Number Field
+			imeiapp.DOM['invoice'].addEventListener('keydown', function(e){
+
+				if (e.keyCode == 13){ /* do something here */ };
+			});
+
+		// Enter Key Saves IMEI -> IMEI Field
+			imeiapp.DOM['IMEI'].addEventListener('keydown', function(e){
+
+				if (e.keyCode == 13){ imeiapp.DOM['saveIMEI'].click(); };
+			});  
+
+		// Force Screens to Full Window Height
+			imeiapp.DOM.setScreensHeight = function(){
+
+				for (var i = imeiapp.DOM.screens.length - 1; i >= 0; i--) {
+
+					if (i < imeiapp.stats.step) { break; }
+					
+					imeiapp.DOM.screens[i].style.height = window.innerHeight + "px"; 
+				};
+
+				imeiapp.pubsub.publish('screensResized', null, 'screenResizer')
+			}
+
+	    // Deactivate Active Screen
+	    	imeiapp.utils.deactivateActiveScreen = function(){
+
+	    		imeiapp.pubsub.publish( "screen-teardown", null, this);
+	    	}
+
+	    // Activate Screen
+	    	imeiapp.utils.activateScreen = function(index){ 
+
+	    		imeiapp.pubsub.publish("screen-" + index + "-setup", null, this); 
+	    	}
+
+	    // Go To Screen
+	    	imeiapp.utils.gotoScreen = function(index, duration){
+ 
+	    		// Deactivate Current Screen
+					imeiapp.utils.deactivateActiveScreen();
+
+				// Set Step
+					imeiapp.stats.step = index;
+
+				// Activate New Screen
+					imeiapp.utils.activateScreen( imeiapp.stats.step );
+	    	}
+
+	    	// Go To Next Screen
+	    		imeiapp.utils.gotoNextScreen = function(){
+
+	    			imeiapp.utils.gotoScreen( imeiapp.stats.step + 1 );
+	    		}
+
+	    	// Go To Next Screen
+	    		imeiapp.utils.gotoPreviousScreen = function(){
+
+	    			imeiapp.utils.gotoScreen( imeiapp.stats.step - 1 );
+	    		}
+
+	    // Update IMEI List
+	    	imeiapp.utils.updateListOfIMEIs = function(){
+
+	    		var imeiList = imeiapp.DOM["imeiReviewList"],
+	    			entries = "";
+
+	    		imeiList.innerHTML = "";
+
+	    		for (var i = 0; i < imeiapp.currentInvoice.imeis.length; i++) {
+	    			var entries = entries + "<span class='imeiForReview'>" + imeiapp.currentInvoice.imeis[i] + "</span>" + (i < imeiapp.currentInvoice.imeis.length - 1 ? " | " : "");
+	    		};
+
+	    		imeiList.innerHTML = entries;
+
+	    		imeiapp.DOM.activateIMEIsForReview();
+	    	}
+
+	    	imeiapp.utils.reviewIMEI = function(index){
+
+	    		if (index < 0){ console.log("no index given to review for reviewIMEI()"); return; }
+
+				// Base Variables				
+					var imei = imeiapp.currentInvoice.imeis[index];
+					var requestEdit = confirm( "Is this IMEI (" + imei + ") Correct?");
+					
+					if(requestEdit !== true){
+
+						var oldimei = imei;
+						var newimei = prompt("Submit the Correct IMEI to Update or Submit a Blank Field to Delete '" + oldimei + "'", oldimei);
+
+						var replaceIMEI = function(){
+
+							imeiapp.currentInvoice.imeis[index] = newimei;
+							alert("'" + oldimei + "' has been replaced with '" + newimei + "'");
 						}
 
-						imeiapp.currentInvoice.imeis.splice(index,1);
-						alert("'" + oldimei + "' has been deleted");
-					}
+						var noChangeAnnouncement = function(){
+							
+							alert("'" + oldimei + "' has not been changed or deleted");
+						}
 
-					if (newimei == oldimei || newimei == null){ noChangeAnnouncement(); }
+						var confirmDeleteRequest = function(){
 
-					else if (newimei == "") { confirmDeleteRequest(); }
+							var requestDelete = confirm("Are you sure you want to delete '" + oldimei + "'?");
 
-					else { replaceIMEI(); }
+							if (requestDelete !== true){
 
-					imeiapp.utils.savedIMEIsTally();
-				} 
-    	}
+								alert("'" + oldimei + "' has not been deleted or modified");
+								return;
+							}
 
-    	imeiapp.DOM.activateIMEIsForReview = function(){
+							imeiapp.currentInvoice.imeis.splice(index,1);
+							alert("'" + oldimei + "' has been deleted");
+						}
 
-    		var IMEIsForReview = imeiapp.DOM["IMEIsForReview"];
+						if (newimei == oldimei || newimei == null){ noChangeAnnouncement(); }
 
-    		for (var i = IMEIsForReview.length - 1; i >= 0; i--) {
-    			
-    			IMEIsForReview[i].addEventListener("click", function(){
+						else if (newimei == "") { confirmDeleteRequest(); }
 
-    				var index = i;
+						else { replaceIMEI(); }
 
-    				return function(){
-    					imeiapp.utils.reviewIMEI(index);
-    				}    				
-    			}());
-    		};
-    	}
+						imeiapp.utils.savedIMEIsTally();
+					} 
+	    	}
+
+	    	imeiapp.DOM.activateIMEIsForReview = function(){
+
+	    		var IMEIsForReview = imeiapp.DOM["IMEIsForReview"];
+
+	    		for (var i = IMEIsForReview.length - 1; i >= 0; i--) {
+	    			
+	    			IMEIsForReview[i].addEventListener("click", function(){
+
+	    				var index = i;
+
+	    				return function(){
+	    					imeiapp.utils.reviewIMEI(index);
+	    				}    				
+	    			}());
+	    		};
+	    	}
+
+		// Activate Back Buttons
+			for (var i = imeiapp.DOM["backBtn"].length - 1; i >= 0; i--) {
+				
+				imeiapp.DOM["backBtn"][i].addEventListener("click", function(){
+
+					imeiapp.utils.gotoScreen(imeiapp.stats.step - 1);
+				});
+			};
+
+		// Activate Next Buttons
+			for (var i = imeiapp.DOM["backBtn"].length - 1; i >= 0; i--) {
+				
+				imeiapp.DOM["nextBtn"][i].addEventListener("click", function(){
+
+					imeiapp.utils.gotoScreen(imeiapp.stats.step + 1);
+				});
+			};
 
     // # APPCACHE
     	if (window.applicationCache){
@@ -992,177 +1183,183 @@
 				checks: {active: 'xhr', xhr: {url: 'server-check.php'}}
 			};
 
-		// 
-		imeiapp.network.networkState = function(){
+		// get network state
+			imeiapp.network.networkState = function(){
 
-			return Offline.state;
-		}
+				return Offline.state;
+			}
 
-		imeiapp.network.checkNetworkState = function(){
+		// force network state check
+			imeiapp.network.checkNetworkState = function(){
 
-			Offline.check();
-		}
+				Offline.check();
+			}
 
-		imeiapp.network.setOnlineState = function(){
-			
-			var _utils = imeiapp.utils;
-			var body = document.body;
+		// set network online class
+			imeiapp.network.setOnlineState = function(){
+				
+				var _utils = imeiapp.utils;
+				var body = document.body;
 
-			_utils.removeClass(body, "connection-offline");
-			_utils.addClass(body, "connection-online");
-		}
+				_utils.removeClass(body, "connection-offline");
+				_utils.addClass(body, "connection-online");
+			}
 
-		imeiapp.network.setOfflineState = function(){
-			
-			var _utils = imeiapp.utils;
-			var body = document.body;
+		// set network offline class
+			imeiapp.network.setOfflineState = function(){
+				
+				var _utils = imeiapp.utils;
+				var body = document.body;
 
-			_utils.removeClass(body, "connection-online");
-			_utils.addClass(body, "connection-offline");
-		}
+				_utils.removeClass(body, "connection-online");
+				_utils.addClass(body, "connection-offline");
+			}
 
-		imeiapp.network.pushRegistrations = function(){
+	// # NETWORK ACTIVITY
 
-			// required variables & shorthand
-				var _i = imeiapp;
+		// send registrations to server
+			imeiapp.network.pushRegistrations = function(){
 
-	            var _u = _i.utils,
-	            	_n = _i.network;
+				// required variables & shorthand
+					var _i = imeiapp;
 
-            // turn registrations into a transaction and get the transaction id
-				var transaction_id = _u.storeTransaction();
+		            var _u = _i.utils,
+		            	_n = _i.network;
 
-            // send transaction to server               
-                _n.sendTransaction( transaction_id );
+	            // turn registrations into a transaction and get the transaction id
+					var transaction_id = _u.storeTransaction();
 
-            return true;			
-		}
+	            // send transaction to server               
+	                _n.sendTransaction( transaction_id );
 
-	// send transaction to server
-		imeiapp.network.sendTransaction = function(transaction_id){
+	            return true;			
+			}
 
-			// filter out improper input
-				if( !transaction_id ) { return false; }
+		// send transaction to server
+			imeiapp.network.sendTransaction = function(transaction_id){
 
-			// required variables
+				// filter out improper input
+					if( !transaction_id ) { return false; }
+
+				// required variables
+					var _publish = imeiapp.pubsub.publish,			
+		            	_POST = imeiapp.network.POST,
+		            	_u = imeiapp.utils,
+						utf8 = _u.utf8,
+
+						transaction = _u.getTransaction(transaction_id),
+		            	transaction_string = JSON.stringify(transaction),
+		            	clean_transaction_string = utf8(transaction_string);
+						
+						POST_success = function(response){
+
+							var publish_params = {};
+								publish_params.server_transaction_id = response,
+								publish_params.client_transaction_id = transaction_id;
+
+							_publish(
+
+								"server-acknowledged-transaction",
+								publish_params,
+								"sendTransaction"
+							);
+						}
+
+				// send transaction
+					var sendTransactionSuccess = _POST(
+
+						location.href + 'process-transaction.php',
+						't=' + clean_transaction_string,
+						POST_success					
+					);
+
+				return sendTransactionSuccess;
+			}
+
+		// check status of pending transactions
+			imeiapp.network.checkTransactionStatus = function(){
+
+				// required vars
 				var _publish = imeiapp.pubsub.publish,			
-	            	_POST = imeiapp.network.POST,
+					_POST = imeiapp.network.POST,
 	            	_u = imeiapp.utils,
-					utf8 = _u.utf8,
-
-					transaction = _u.getTransaction(transaction_id),
-	            	transaction_string = JSON.stringify(transaction),
-	            	clean_transaction_string = utf8(transaction_string);
+					
+					keys_to_check = [],
+					transactions_db = _u.getTransactionStorage(),
 					
 					POST_success = function(response){
 
-						var publish_params = {};
-							publish_params.server_transaction_id = response,
-							publish_params.client_transaction_id = transaction_id;
+						var status_updates = JSON.parse(response);
+
+							_publish(
+
+								"transaction-status-received",
+								status_updates,
+								"checkTransactionStatus"
+							);
+					};
+
+				// get transaction ids
+					for (var transaction_id in transactions_db) {
+					 	
+					 	if (!transactions_db.hasOwnProperty(transaction_id)) { continue; }
+					    
+					 	keys_to_check.push( transaction_id );			  	
+					}
+
+					keys_to_check = JSON.stringify( keys_to_check );
+
+				// POST				
+					_POST(
+
+						location.href + 'transaction-status-check.php',
+						't=' + keys_to_check,
+						POST_success
+					);
+			}
+
+		// check status of pending transactions
+			imeiapp.network.confirmArchivedTransactions = function(){
+
+				// required variables
+				var _app = imeiapp,
+	            	_u = _app.utils,
+	            	_POST = _app.network.POST,
+					_publish = _app.pubsub.publish,			
+
+					keys_to_confirm = [],
+					archives_db = _u.getArchiveStorage(),
+
+					post_success = function(response){
+
+						var status_updates = JSON.parse(response);
 
 						_publish(
 
-							"server-acknowledged-transaction",
-							publish_params,
-							"sendTransaction"
+							"transactions-confirmed",
+							status_updates,
+							"confirmArchivedTransactions"
 						);
 					}
 
-			// send transaction
-				var sendTransactionSuccess = _POST(
+				// get keys to confirm
+					for (var transaction_id in archives_db) {
+					 	
+					 	if (!archives_db.hasOwnProperty(transaction_id)) { continue; }
+					    
+					 	keys_to_confirm.push( transaction_id );			  	
+					}
 
-					location.href + 'process-transaction.php',
-					't=' + clean_transaction_string,
-					POST_success					
-				);
+					keys_to_confirm = JSON.stringify( keys_to_confirm );
 
-			return sendTransactionSuccess;
-		}
+				// send to server
+					imeiapp.network.POST(
 
-	// check status of pending transactions
-		imeiapp.network.checkTransactionStatus = function(){
-
-			// required vars
-			var _publish = imeiapp.pubsub.publish,			
-				_POST = imeiapp.network.POST,
-            	_u = imeiapp.utils,
-				
-				keys_to_check = [],
-				transactions_db = _u.getTransactionStorage(),
-				
-				POST_success = function(response){
-
-					var status_updates = JSON.parse(response);
-
-						_publish(
-
-							"transaction-status-received",
-							status_updates,
-							"checkTransactionStatus"
-						);
-				};
-
-			// get transaction ids
-				for (var transaction_id in transactions_db) {
-				 	
-				 	if (!transactions_db.hasOwnProperty(transaction_id)) { continue; }
-				    
-				 	keys_to_check.push( transaction_id );			  	
-				}
-
-				keys_to_check = JSON.stringify( keys_to_check );
-
-			// POST				
-				_POST(
-
-					location.href + 'transaction-status-check.php',
-					't=' + keys_to_check,
-					POST_success
-				);
-		}
-
-	// check status of pending transactions
-		imeiapp.network.confirmArchivedTransactions = function(){
-
-			// required variables
-			var _app = imeiapp,
-            	_u = _app.utils,
-            	_POST = _app.network.POST,
-				_publish = _app.pubsub.publish,			
-
-				keys_to_confirm = [],
-				archives_db = _u.getArchiveStorage(),
-
-				post_success = function(response){
-
-					var status_updates = JSON.parse(response);
-
-					_publish(
-
-						"transactions-confirmed",
-						status_updates,
-						"confirmArchivedTransactions"
+						location.href + 'confirm-transaction.php',
+						't=' + keys_to_confirm,
+						post_success
 					);
-				}
-
-			// get keys to confirm
-				for (var transaction_id in archives_db) {
-				 	
-				 	if (!archives_db.hasOwnProperty(transaction_id)) { continue; }
-				    
-				 	keys_to_confirm.push( transaction_id );			  	
-				}
-
-				keys_to_confirm = JSON.stringify( keys_to_confirm );
-
-			// send to server
-				imeiapp.network.POST(
-
-					location.href + 'confirm-transaction.php',
-					't=' + keys_to_confirm,
-					post_success
-				);
-		}
+			}
 
 		// create POST request
 			imeiapp.network.POST = function(url, msg, success, fail){
@@ -1196,31 +1393,6 @@
 
 				return true;	
 			}
-
-		// log result of send transaction
-			imeiapp.pubsub.subscribe(
-
-				"server-acknowledged-transaction",
-				"console.log",
-				function(metadata){
-
-					var server_id = metadata.notificationParams.server_transaction_id;
-					var client_id = metadata.notificationParams.client_transaction_id;
-
-					if (server_id == client_id){
-
-						console.log("server received transaction " + server_id );
-
-					}
-
-					else { 
-
-						console.log("something went wrong: client and server id don't match");
-						console.log(metadata.notificationParams);
-					}
-				},
-				null
-			);
 
 		imeiapp.pubsub.subscribe(
 
@@ -1299,6 +1471,7 @@
 			null
 		);
 
+	// confirm network transactions
 		imeiapp.pubsub.subscribe(
 
 			"transactions-confirmed",
@@ -1322,6 +1495,297 @@
 			null
 		);
 
+	// Network Status Reconnecting -> Indicator Light Flicker 
+		imeiapp.pubsub.subscribe(
+
+			'network-reconnecting', 
+			'light-flicker',
+			function(){
+
+				var _utils = imeiapp.utils,
+					indicators = imeiapp.DOM["connectionIndicator"];
+				
+				// Flicker Lights while Reconnecting  
+					imeiapp.network.checkingLightFlickerInterval = setInterval( function(){				
+
+						for (var i = indicators.length - 1; i >= 0; i--) {
+							
+							// Orange On
+								_utils.addClass(indicators[i], "connection-checking");
+
+							// Orange Off
+								setTimeout( function(){
+
+									var count = i;
+
+									return function(){ _utils.removeClass(indicators[count], "connection-checking"); }
+								}(), 350);
+						};
+					}, 2000);
+
+				// Stop Flickering on Reconnect Exit
+					imeiapp.pubsub.subscribe(
+
+						'network-reconnecting-exit', 
+						'light-flicker',
+						function(){
+
+							clearInterval( imeiapp.network.checkingLightFlickerInterval );
+							imeiapp.pubsub.unsubscribe('network-reconnecting-exit', 'light-flicker');
+						},
+						null
+					);
+			},
+			null
+		);
+
+	// Network Offline -> Network Online
+		imeiapp.pubsub.subscribe(
+
+			'network-up', 
+			'online-indicator',
+			function(){
+
+				imeiapp.network.setOnlineState();
+			},
+			null
+		);
+
+	// Network Online -> Network Offline
+		imeiapp.pubsub.subscribe(
+
+			'network-down', 
+			'online-indicator',
+			function(){
+
+				imeiapp.network.setOfflineState();
+			},
+			null
+		);
+
+	// Heartbeat -> Network Online
+		imeiapp.pubsub.subscribe(
+
+			'network-up', 
+			'heartbeat',
+			function(){ 
+				
+				// required vars
+				var _n = imeiapp.network,
+					_p = imeiapp.pubsub,
+
+					_int = _n.intervals,
+					_sub = _p.subscribe,
+					_unsub = _p.unsubscribe,
+
+					heartbeat = function(){
+						
+						_n.checkNetworkState();
+					},
+
+					stopHeartbeat = function(){
+
+						clearInterval(_int.heartbeat);
+						delete _int.heartbeat;
+					};
+
+				// check every 7.5s
+					_int.heartbeat = setInterval( heartbeat, 1000 * 7.5);
+
+				// stop heartbeat on disconnect from the internet
+					_sub(
+						"network-down",
+						"heartbeat",
+						function(){
+
+							stopHeartbeat();
+							_unsub("network-down", "heartbeat");								
+						},
+						null
+					);
+			},
+			null
+		);
+
+	// Transaction -> Check Status on Server
+		imeiapp.pubsub.subscribe(
+
+			'network-up', 
+			'confirm-transactions',
+			function(){
+
+				// reqs
+				var _app = imeiapp,
+					_n = _app.network,
+					_s = _app.storage,
+					_p = _app.pubsub,
+
+					_int = _n.intervals,
+					_sub = _p.subscribe,
+					_unsub = _p.unsubscribe,
+					
+					confirmArchivedTransactions = function(){						
+				
+						// filter out bad input
+	                        if( !_s || !_s.archives || !JSON.parse(_s.archives) ){ return; }
+
+	                    // check status if transactions db isn't empty
+	                    	var archives_db = imeiapp.utils.getArchiveStorage();
+
+		                    for (var key in archives_db){
+
+								if ( archives_db.hasOwnProperty(key) ){
+
+									_n.confirmArchivedTransactions();
+									break;
+								}
+							}
+					},
+
+					cancelArchivedTransactionsInterval = function(){
+
+						clearInterval(_int.confirmArchivedTransactions);
+						delete _int.confirmArchivedTransactions;
+					};
+
+				// confirm now
+					confirmArchivedTransactions();
+
+				// confirm every 9 mins: 1000(ms) * 60(s) * 9(m)
+					_int.confirmArchivedTransactions = setInterval( confirmArchivedTransactions, 1000 * 60 * 9);
+
+				// cancel interval when network's down
+					_sub(
+
+						"network-down",
+						"confirm-transactions",
+						function(){
+
+							cancelArchivedTransactionsInterval();
+							_unsub("network-down","confirm-transactions");
+						},
+						null
+					);
+			},
+			null
+		);
+
+	// Transaction -> Check Status on Server
+		imeiapp.pubsub.subscribe(
+
+			'network-up', 
+			'check-transaction-status',
+			function(){ 
+
+				// reqs
+				var _app = imeiapp,
+					_p = _app.pubsub,
+					_n = _app.network,
+					_s = _app.storage,
+
+					_int = _n.intervals,
+					_sub = _p.subscribe,
+					_unsub = _p.unsubscribe,
+
+					checkTransactionStatus = function(){
+
+						// filter out bad input
+	                        if( !_s || !_s.transactions || !JSON.parse(_s.transactions) ){ return; }
+
+	                    // check status if transactions db isn't empty
+	                    	var transactions_db = imeiapp.utils.getTransactionStorage();
+
+		                    for (var key in transactions_db){
+
+								if ( transactions_db.hasOwnProperty(key) ){
+
+									_n.checkTransactionStatus();
+									break;
+								}
+							}
+					},
+
+					cancelCheckTransactionStatusInterval = function(){
+
+						clearInterval(_int.transactionStatusCheck);
+						delete _int.transactionStatusCheck;
+					};
+
+				// check now
+					checkTransactionStatus();
+
+				// check every 10 mins: 1000(ms) * 60(s) * 10(m)
+					_int.transactionStatusCheck = setInterval(checkTransactionStatus, 1000 * 60 * 10);
+
+				// cancel interval when network's down
+					_sub(
+
+						"network-down",
+						"check-transaction-status",
+						function(){
+
+							cancelCheckTransactionStatusInterval();
+							_unsub("network-down", "check-transaction-status");
+						},
+						null
+					);
+			},
+			null
+		);
+
+	// Transaction -> Send Registrations to Server
+		imeiapp.pubsub.subscribe(
+
+			'network-up', 
+			'push-registrations-to-server',
+			function(){ 
+				
+				// reqs
+				var _app = imeiapp,
+					_p = _app.pubsub,
+					_n = _app.network,
+					_s = _app.storage,
+
+					_int = _n.intervals,
+					_sub = _p.subscribe,
+					_unsub = _p.unsubscribe,
+
+					pushRegistrations = function(){
+
+						// filter out bad input
+	                        if( !_s || !_s.registrations || !JSON.parse(_s.registrations) || JSON.parse(_s.registrations).length < 1 ){ return; }
+
+						_n.pushRegistrations();
+					},
+
+					cancelPushRegistrationsInterval = function(){
+
+						clearInterval(_int.pushRegistrations); 
+						delete _int.pushRegistrations; 
+					};
+
+				// push now
+					pushRegistrations();
+
+				// push every 11m
+					_int.pushRegistrations = setInterval( pushRegistrations, 1000 * 60 * 11);
+
+				// clear interval when network's down
+					_sub(
+
+						"network-down",
+						"push-registrations-to-server",
+						function(){
+
+							cancelPushRegistrationsInterval();
+							_unsub("network-down","push-registrations-to-server");
+						},
+						null
+					);
+			},
+			null
+		);
+
 		Offline.on("up", function(){
 
 			imeiapp.pubsub.publish("network-up", null, "connection-watchdog");
@@ -1341,294 +1805,3 @@
 
 			imeiapp.pubsub.publish("network-reconnecting-exit", null, "connection-watchdog");
 		});
-
-		// Network Status Reconnecting -> Indicator Light Flicker 
-			imeiapp.pubsub.subscribe(
-
-				'network-reconnecting', 
-				'light-flicker',
-				function(){
-
-					var _utils = imeiapp.utils,
-						indicators = imeiapp.DOM["connectionIndicator"];
-					
-					// Flicker Lights while Reconnecting  
-						imeiapp.network.checkingLightFlickerInterval = setInterval( function(){				
-
-							for (var i = indicators.length - 1; i >= 0; i--) {
-								
-								// Orange On
-									_utils.addClass(indicators[i], "connection-checking");
-
-								// Orange Off
-									setTimeout( function(){
-
-										var count = i;
-
-										return function(){ _utils.removeClass(indicators[count], "connection-checking"); }
-									}(), 350);
-							};
-						}, 2000);
-
-					// Stop Flickering on Reconnect Exit
-						imeiapp.pubsub.subscribe(
-
-							'network-reconnecting-exit', 
-							'light-flicker',
-							function(){
-
-								clearInterval( imeiapp.network.checkingLightFlickerInterval );
-								imeiapp.pubsub.unsubscribe('network-reconnecting-exit', 'light-flicker');
-							},
-							null
-						);
-				},
-				null
-			);
-
-		// Network Offline -> Network Online
-			imeiapp.pubsub.subscribe(
-
-				'network-up', 
-				'online-indicator',
-				function(){
-
-					imeiapp.network.setOnlineState();
-				},
-				null
-			);
-
-		// Network Online -> Network Offline
-			imeiapp.pubsub.subscribe(
-
-				'network-down', 
-				'online-indicator',
-				function(){
-
-					imeiapp.network.setOfflineState();
-				},
-				null
-			);
-
-		// Heartbeat -> Network Online
-			imeiapp.pubsub.subscribe(
-
-				'network-up', 
-				'heartbeat',
-				function(){ 
-					
-					// required vars
-					var _n = imeiapp.network,
-						_p = imeiapp.pubsub,
-
-						_int = _n.intervals,
-						_sub = _p.subscribe,
-						_unsub = _p.unsubscribe,
-
-						heartbeat = function(){
-							
-							_n.checkNetworkState();
-						},
-
-						stopHeartbeat = function(){
-
-							clearInterval(_int.heartbeat);
-							delete _int.heartbeat;
-						};
-
-					// check every 7.5s
-						_int.heartbeat = setInterval( heartbeat, 1000 * 7.5);
-
-					// stop heartbeat on disconnect from the internet
-						_sub(
-							"network-down",
-							"heartbeat",
-							function(){
-
-								stopHeartbeat();
-								_unsub("network-down", "heartbeat");								
-							},
-							null
-						);
-				},
-				null
-			);
-
-		// Transaction -> Check Status on Server
-			imeiapp.pubsub.subscribe(
-
-				'network-up', 
-				'confirm-transactions',
-				function(){
-
-					// reqs
-					var _app = imeiapp,
-						_n = _app.network,
-						_s = _app.storage,
-						_p = _app.pubsub,
-
-						_int = _n.intervals,
-						_sub = _p.subscribe,
-						_unsub = _p.unsubscribe,
-						
-						confirmArchivedTransactions = function(){						
-					
-							// filter out bad input
-		                        if( !_s || !_s.archives || !JSON.parse(_s.archives) ){ return; }
-
-		                    // check status if transactions db isn't empty
-		                    	var archives_db = imeiapp.utils.getArchiveStorage();
-
-			                    for (var key in archives_db){
-
-									if ( archives_db.hasOwnProperty(key) ){
-
-										_n.confirmArchivedTransactions();
-										break;
-									}
-								}
-						},
-
-						cancelArchivedTransactionsInterval = function(){
-
-							clearInterval(_int.confirmArchivedTransactions);
-							delete _int.confirmArchivedTransactions;
-						};
-
-					// confirm now
-						confirmArchivedTransactions();
-
-					// confirm every 9 mins: 1000(ms) * 60(s) * 9(m)
-						_int.confirmArchivedTransactions = setInterval( confirmArchivedTransactions, 1000 * 60 * 9);
-
-					// cancel interval when network's down
-						_sub(
-
-							"network-down",
-							"confirm-transactions",
-							function(){
-
-								cancelArchivedTransactionsInterval();
-								_unsub("network-down","confirm-transactions");
-							},
-							null
-						);
-				},
-				null
-			);
-
-		// Transaction -> Check Status on Server
-			imeiapp.pubsub.subscribe(
-
-				'network-up', 
-				'check-transaction-status',
-				function(){ 
-
-					// reqs
-					var _app = imeiapp,
-						_p = _app.pubsub,
-						_n = _app.network,
-						_s = _app.storage,
-
-						_int = _n.intervals,
-						_sub = _p.subscribe,
-						_unsub = _p.unsubscribe,
-
-						checkTransactionStatus = function(){
-
-							// filter out bad input
-		                        if( !_s || !_s.transactions || !JSON.parse(_s.transactions) ){ return; }
-
-		                    // check status if transactions db isn't empty
-		                    	var transactions_db = imeiapp.utils.getTransactionStorage();
-
-			                    for (var key in transactions_db){
-
-									if ( transactions_db.hasOwnProperty(key) ){
-
-										_n.checkTransactionStatus();
-										break;
-									}
-								}
-						},
-
-						cancelCheckTransactionStatusInterval = function(){
-
-							clearInterval(_int.transactionStatusCheck);
-							delete _int.transactionStatusCheck;
-						};
-
-					// check now
-						checkTransactionStatus();
-
-					// check every 10 mins: 1000(ms) * 60(s) * 10(m)
-						_int.transactionStatusCheck = setInterval(checkTransactionStatus, 1000 * 60 * 10);
-
-					// cancel interval when network's down
-						_sub(
-
-							"network-down",
-							"check-transaction-status",
-							function(){
-
-								cancelCheckTransactionStatusInterval();
-								_unsub("network-down", "check-transaction-status");
-							},
-							null
-						);
-				},
-				null
-			);
-
-		// Transaction -> Send Registrations to Server
-			imeiapp.pubsub.subscribe(
-
-				'network-up', 
-				'push-registrations-to-server',
-				function(){ 
-					
-					// reqs
-					var _app = imeiapp,
-						_p = _app.pubsub,
-						_n = _app.network,
-						_s = _app.storage,
-
-						_int = _n.intervals,
-						_sub = _p.subscribe,
-						_unsub = _p.unsubscribe,
-
-						pushRegistrations = function(){
-
-							// filter out bad input
-		                        if( !_s || !_s.registrations || !JSON.parse(_s.registrations) || JSON.parse(_s.registrations).length < 1 ){ return; }
-
-							_n.pushRegistrations();
-						},
-
-						cancelPushRegistrationsInterval = function(){
-
-							clearInterval(_int.pushRegistrations); 
-							delete _int.pushRegistrations; 
-						};
-
-					// push now
-						pushRegistrations();
-
-					// push every 11m
-						_int.pushRegistrations = setInterval( pushRegistrations, 1000 * 60 * 11);
-
-					// clear interval when network's down
-						_sub(
-
-							"network-down",
-							"push-registrations-to-server",
-							function(){
-
-								cancelPushRegistrationsInterval();
-								_unsub("network-down","push-registrations-to-server");
-							},
-							null
-						);
-				},
-				null
-			);

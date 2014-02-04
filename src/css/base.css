@@ -7,6 +7,16 @@ html, body {
 	font-family: arial, helvetica, sans-serif;
 }
 
+.invisible {
+
+	visibility: hidden;
+}
+
+.visible {
+
+	visibility: visible;
+}
+
 #app-hud {
 
 	display: block;
@@ -15,7 +25,7 @@ html, body {
 	z-index: 10;
 	top: 0;
 
-	height: 4em;
+	height: 3.5em;
 
 	overflow: hidden;
 
@@ -238,7 +248,7 @@ body #app-hud .connection-indicator.connection-checking {
 	color: red;
 }
 
-.progress {
+.nextStep {
 
 	float: right;
 	position: relative;
@@ -275,16 +285,6 @@ input.attention {
 
 	border-color: red;
 	background-color: orange;
-}
-
-#reviewInvoice {
-
-	visibility: hidden;
-}
-
-#reviewInvoice.active {
-
-	visibility: visible;
 }
 
 /* WebKit browsers */
