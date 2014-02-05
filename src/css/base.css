@@ -214,12 +214,15 @@ body #app-hud .connection-indicator.connection-checking {
 	margin-right: 1.5em;
 	padding: 1.25em .75em .25em .75em;
 	transition: color .75s ease-out;
-
 }
 
 .previousStep {
 
 	color: red;
+}
+
+.previousStep, #editSavedIMEIs {
+	
 	margin-left: 2.75em;
 }
 
@@ -263,7 +266,6 @@ body #app-hud .connection-indicator.connection-checking {
 	font-size: .75em;
 	color: #fff;
 	top: -4.2px;
-
 
 	-webkit-border-radius: 5px 5px 5px 5px;
 	border-radius: 5px 5px 5px 5px;

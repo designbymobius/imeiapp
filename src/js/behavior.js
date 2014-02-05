@@ -201,18 +201,6 @@
             }
         };
 
-    // Active Screen Index
-        imeiapp.utils.activeScreenIndex = function(){
-
-            var screens = imeiapp.DOM.screens,
-                hasClass = imeiapp.utils.hasClass;
-
-            for (var i = screens.length - 1; i >= 0; i--){
-                
-                if ( hasClass(screens[i], "active") ){ return i; }
-            }
-        };
-
     // App Ready
         imeiapp.utils.launchApp = function() {
 
@@ -222,7 +210,7 @@
                 var _DOM = _app.DOM,
                     _utils = _app.utils,
                     _pubsub = _app.pubsub,
-                    _storage = _app.storage,
+                    _storage = window.localStorage,
                     _network = _app.network;
 
                 var _publish = _pubsub.publish,
@@ -310,7 +298,7 @@
 
             var _app = imeiapp;
 
-            var _s = _app.storage,
+            var _s = window.localStorage,
                 _u = _app.utils;
 
             var storage = _s[storageName];
@@ -334,7 +322,7 @@
 
             // update storage
                 var storage = imeiapp.utils.getRegistrationStorage();
-                storage.push(registration);y(storage);
+                storage.push(registration);
 
             return true;
         };
@@ -361,10 +349,12 @@
                 var transaction_id = sha1( '"' + clean_string + '"' );
 
             // update transactions storage
-                transactions_db[transaction_id] = transaction_sy(transactions_db);
+                transactions_db[transaction_id] = transaction_string;
+                imeiapp.storage.transactions = JSON.stringify(transactions_db);
 
             // reset registrations storage
-                deletp.utils.createRegistrationStorage();  
+                delete imeiapp.storage.registrations;
+                imeiapp.utils.createRegistrationStorage();
 
             return transaction_id;
         };
@@ -411,9 +401,118 @@
 
             // transfer transaction to archives
                 delete archives_db[transaction_id];
-                console.log("deleted transaction #" + transaction_id + " from archives");y(archives_db);
+                console.log("deleted transaction #" + transaction_id + " from archives");
 
             return true;
+        };
+
+    // Deactivate Active Screen
+        imeiapp.utils.deactivateActiveScreen = function(){
+
+            imeiapp.pubsub.publish( "screen-teardown", null, this);
+        };
+
+    // Activate Screen
+        imeiapp.utils.activateScreen = function(index){ 
+
+            imeiapp.pubsub.publish("screen-" + index + "-setup", null, this); 
+        };
+
+    // Go To Screen
+        imeiapp.utils.gotoScreen = function(index, duration){
+
+            // Deactivate Current Screen
+                imeiapp.utils.deactivateActiveScreen();
+
+            // Set Step
+                imeiapp.stats.step = index;
+
+            // Activate New Screen
+                imeiapp.utils.activateScreen( imeiapp.stats.step );
+        };
+
+            imeiapp.utils.gotoNextScreen = function(){
+
+                imeiapp.utils.gotoScreen( imeiapp.stats.step + 1 );
+            }; 
+
+            imeiapp.utils.gotoPreviousScreen = function(){
+
+                imeiapp.utils.gotoScreen( imeiapp.stats.step - 1 );
+            };
+
+    //  *DELETE THIS*
+        // Update IMEI List
+            imeiapp.utils.updateListOfIMEIs = function(){
+
+                var imeiList = imeiapp.DOM.imeiReviewList,
+                    entries = "";
+
+                imeiList.innerHTML = "";
+
+                for (var i = 0; i < imeiapp.currentInvoice.imeis.length; i++) {
+                    entries = entries + "<span class='imeiForReview'>" + imeiapp.currentInvoice.imeis[i] + "</span>" + (i < imeiapp.currentInvoice.imeis.length - 1 ? " | " : "");
+                }
+
+                imeiList.innerHTML = entries;
+
+                imeiapp.DOM.activateIMEIsForReview();
+            };        
+
+    // Update sections that display the Invoice Number 
+        imeiapp.utils.updateInvoiceNumberReferences = function(){
+
+                for (var i = imeiapp.DOM.invoiceNumberSlots.length - 1; i >= 0; i--) {
+                    imeiapp.DOM.invoiceNumberSlots[i].innerHTML = "#" + imeiapp.DOM.invoice.value; 
+                }
+        };
+
+        imeiapp.utils.reviewIMEI = function(index){
+
+            if (index < 0){ console.log("no index given to review for reviewIMEI()"); return; }
+
+            // Base Variables               
+                var imei = imeiapp.currentInvoice.imeis[index];
+                var requestEdit = confirm( "Is this IMEI (" + imei + ") Correct?");
+                
+                if(requestEdit !== true){
+
+                    var oldimei = imei;
+                    var newimei = prompt("Submit the Correct IMEI to Update or Submit a Blank Field to Delete '" + oldimei + "'", oldimei);
+
+                    var replaceIMEI = function(){
+
+                        imeiapp.currentInvoice.imeis[index] = newimei;
+                        alert("'" + oldimei + "' has been replaced with '" + newimei + "'");
+                    }
+
+                    var noChangeAnnouncement = function(){
+                        
+                        alert("'" + oldimei + "' has not been changed or deleted");
+                    }
+
+                    var confirmDeleteRequest = function(){
+
+                        var requestDelete = confirm("Are you sure you want to delete '" + oldimei + "'?");
+
+                        if (requestDelete !== true){
+
+                            alert("'" + oldimei + "' has not been deleted or modified");
+                            return;
+                        }
+
+                        imeiapp.currentInvoice.imeis.splice(index,1);
+                        alert("'" + oldimei + "' has been deleted");
+                    }
+
+                    if (newimei === oldimei || newimei === null){ noChangeAnnouncement(); }
+
+                    else if (newimei === "") { confirmDeleteRequest(); }
+
+                    else { replaceIMEI(); }
+
+                    imeiapp.pubsub.publish("imei-tally-updated", null, this );
+                } 
         };
 
 // # ANIMATION
@@ -462,57 +561,7 @@
     
     // Publish
 
-        // #saveIMEI -> Save Current IMEI
-            imeiapp.DOM.saveIMEI.addEventListener("click", function(){
-
-                imeiapp.pubsub.publish("save-imei", null, this);
-            });
-
-        // #editSavedIMEIs -> Review IMEIs
-            imeiapp.DOM.editSavedIMEIs.addEventListener("click", function(){
-
-                imeiapp.pubsub.publish("edit-imei", null, this);
-            });
-
-        // #finish-registration -> Save Invoice
-            imeiapp.DOM.completeRegistration.addEventListener("click", function(){
-
-                imeiapp.pubsub.publish("save-registration", null, this);
-            });
-
-        // Recalculate Tally of IMEIs attached to Current Invoice
-            imeiapp.utils.savedIMEIsTally = function(){
-
-                imeiapp.pubsub.publish("imei-tally", null, this );
-            };
-
-        // Edit -> Review Stored IMEIs
-            imeiapp.DOM.editSavedIMEIs.addEventListener('click', function(){
-
-                for (var i = 0; i < imeiapp.currentInvoice.imeis.length; i++) {
-                    
-                    // prep for delete sequence
-                        var totalOldIMEIs = imeiapp.currentInvoice.imeis.length;
-
-                    // process this IMEI
-                        imeiapp.utils.reviewIMEI(i);
-
-                    // if a delete occured, fix index
-                        if (totalOldIMEIs > imeiapp.currentInvoice.imeis.length){ i = i-1; }
-                }
-
-
-                // Check if any IMEIs are attached 
-                    if (imeiapp.currentInvoice.imeis.length === 0){
-
-                        alert("There are no IMEIs attached to this Invoice");
-                    }
-
-                // Update IMEI Tally
-                    imeiapp.utils.savedIMEIsTally();
-            });
-
-        // .restart -> Cancel Registration
+        // Activate Restart Buttons
             for (var i = imeiapp.DOM.cancelRegistration.length - 1; i >= 0; i--) {
                 
                 imeiapp.DOM.cancelRegistration[i].addEventListener("click", function(){
@@ -521,125 +570,18 @@
                 });
              }
                 
-        // debounced resize util -> Window Size Change
+        // Detect Window Resize
             imeiapp.utils.onResize(function(){
 
                 imeiapp.pubsub.publish('windowResized', null, this);
             });
 
     // Subscribe
-        // Step 1 -> Add IMEI
+
+        // Update IMEI Tally Slots
             imeiapp.pubsub.subscribe(
 
-                'add-imei', 
-                'step-1',
-                function(){
-
-                    // Ensure an Invoice Number is Included
-                        if( !imeiapp.DOM.invoice.value ){
-
-                            alert("An Invoice Number is Needed to Continue");
-                            
-                            imeiapp.utils.addClass( imeiapp.DOM.invoice, "attention" );
-
-                            imeiapp.DOM.invoice.addEventListener('input', function(){
-
-                                imeiapp.utils.removeClass( imeiapp.DOM.invoice, "attention" );
-                                imeiapp.DOM.invoice.removeEventListener('input', arguments.callee);
-                            });
-
-                            return;
-                        }
-
-                    // Update Invoice Object
-                        imeiapp.currentInvoice.invoice = imeiapp.DOM.invoice.value;
-
-                    // Update sections that display the Invoice Number 
-                        for (var i = imeiapp.DOM.invoiceNumberSlots.length - 1; i >= 0; i--) {
-                            imeiapp.DOM.invoiceNumberSlots[i].innerHTML = "#" + imeiapp.DOM.invoice.value; 
-                        }
-
-                    imeiapp.utils.gotoScreen(imeiapp.stats.step + 1);
-                    imeiapp.DOM.IMEI.focus();
-                },
-                null
-            );
-
-        // Save IMEI -> Update JSON
-            imeiapp.pubsub.subscribe(
-
-                'save-imei',
-                'step-2',
-                function(){
-
-                    // Don't Save Empty Entries
-                        if (!imeiapp.DOM.IMEI.value){
-
-                            alert("No IMEI Number to Store");
-                            
-                            imeiapp.utils.addClass( imeiapp.DOM.IMEI, "attention" );
-
-                            imeiapp.DOM.IMEI.addEventListener('input', function(){
-
-                                imeiapp.utils.removeClass( this, "attention" );
-                                this.removeEventListener('input', arguments.callee);
-                            });
-
-                            return;
-                        }
-
-                    // Create IMEI Container for Invoice if it doesn't exist
-                        if (!imeiapp.currentInvoice.imeis){ imeiapp.currentInvoice.imeis = []; }
-
-                    // Save to JSON Object
-                        imeiapp.currentInvoice.imeis.push(imeiapp.DOM.IMEI.value);
-
-                    // Update User
-                        alert("'" + imeiapp.DOM.IMEI.value + "' has been added to Invoice #" + imeiapp.currentInvoice.invoice );
-
-                    // Broadcast New Tally
-                        imeiapp.utils.savedIMEIsTally();
-
-                    // Cleanup & Fix Focus
-                        imeiapp.DOM.IMEI.value = null;
-                        imeiapp.DOM.IMEI.focus();
-
-                },
-                null
-            );
-
-        // Step 2 -> Hide / Show 'Next Step' Button
-            imeiapp.pubsub.subscribe(
-
-                'imei-tally',
-                'step-2-progress-btn',              
-                function(){
-
-                    /*
-
-                    var btn = imeiapp.DOM.reviewInvoice;
-                    var addClass = imeiapp.utils.addClass;
-                    var removeClass = imeiapp.utils.removeClass;
-                    var tally = imeiapp.currentInvoice.imeis.length;
-
-                    if(tally > 0){ 
-                        addClass(btn, "active"); 
-                    }
-                    
-                    else { 
-                        removeClass(btn, "active"); 
-                    }
-
-                    */
-
-                },
-                null
-            );
-
-        // Step 2 -> Update IMEI Tally Slots
-            imeiapp.pubsub.subscribe(
-
-                'imei-tally',
+                'imei-tally-updated',
                 'tally-slots-updater',              
                 function(){
 
@@ -648,36 +590,6 @@
 
                     for (var i = tallySlots.length - 1; i >= 0; i--) {
                         tallySlots[i].innerHTML = tally;
-                    }
-
-                },
-                null
-            );
-
-        // Review Invoice -> Step 3
-            imeiapp.pubsub.subscribe(
-
-                'reviewInvoice', 
-                'step-2',
-                function(){
-
-                    imeiapp.utils.gotoScreen(3);
-                },
-                null
-            );
-
-        // Save Current Invoice -> Registration Completed
-            imeiapp.pubsub.subscribe(
-
-                'save-registration', 
-                'final-step',
-                function(){
-
-                    var storeInvoice = imeiapp.utils.storeRegistration(imeiapp.currentInvoice);
-
-                    if(storeInvoice !== false){
-
-                        imeiapp.pubsub.publish("registration-completed", null, "final-step");
                     }
                 },
                 null
@@ -696,15 +608,12 @@
                 null
             );
 
-        // Step 3 -> Update List of IMEIs
+        // Update Invoice Number Slots 
             imeiapp.pubsub.subscribe(
 
-                'imei-tally',
+                'invoice-number-updated',
                 'step-3-imei-list',             
-                function(){
-
-                    imeiapp.utils.updateListOfIMEIs();
-                },
+                imeiapp.utils.updateInvoiceNumberReferences,
                 null
             );
 
@@ -722,58 +631,32 @@
                     // Reset Stored Data
                         imeiapp.currentInvoice.invoice = "";
                         imeiapp.currentInvoice.imeis = [];
-                        imeiapp.utils.savedIMEIsTally();
+                        imeiapp.pubsub.publish("imei-tally-updated", null, this );
 
                     imeiapp.utils.gotoScreen(0);
-
                 },
                 null
             );
 
-        // Edit Invoice -> Step 1
+        // Force Return to IMEI Collection Screen if none is stored
             imeiapp.pubsub.subscribe(
 
-                'edit-invoice', 
-                'editInvoiceBtn',
+                'imei-tally-updated', 
+                'gatekeeper',
                 function(){
 
-                    imeiapp.utils.gotoScreen(1);
-                    imeiapp.DOM.invoice.select();
+                    // required vars
+                        var imeiScreenIndex = 1;
 
-                },
-                null
-            );
+                    // filter
+                        if ( imeiapp.stats.step <= imeiScreenIndex ){ return; }
 
-        // Edit Invoice Attachments -> Step 2
-            imeiapp.pubsub.subscribe(
+                    // check if any imeis are saved
+                        if( imeiapp.currentInvoice.imeis.length < 1 ){
 
-                'edit-invoice-attachments', 
-                'step-3-back-btn',
-                function(){
-
-                    imeiapp.utils.gotoScreen(2);
-                    imeiapp.DOM.IMEI.select();
-
-                },
-                null
-            );
-
-        // Step 3 Bouncer -> Step 2
-            imeiapp.pubsub.subscribe(
-
-                'imei-tally', 
-                'step-3-bouncer',
-                function(){
-
-                    var activeScreen = imeiapp.utils.activeScreenIndex();
-
-                    if ( activeScreen === 3 && imeiapp.currentInvoice.imeis.length < 1){
-
-                        alert("No IMEIs are currently attached to Invoice #" + imeiapp.currentInvoice.invoice + ". \n\nAdd at least 1 to Proceed");
-                            
-                        imeiapp.utils.gotoScreen(2);
-                        imeiapp.DOM.IMEI.select();
-                    }
+                            alert("No IMEIs are currently attached. \n\nAdd at least 1 to Proceed");                            
+                            imeiapp.utils.gotoScreen(imeiScreenIndex);
+                        }
                 },
                 null
             );
@@ -794,7 +677,7 @@
                 null
             );
 
-        // Scroll on Resize
+        // Scroll to Active Screen when Setup is Complete
             imeiapp.pubsub.subscribe(
                 'screen-setup-complete', 
                 'autoScroller',
@@ -802,7 +685,7 @@
                 null
             );
 
-        // Activated Screen Height Fixer
+        // Fix Screen Height After Scrolling to It
             imeiapp.pubsub.subscribe(
                 'gotToScreen', 
                 'activeScreenWatchdog',
@@ -810,7 +693,7 @@
                 null
                 );
 
-        // log result of send transaction
+        // Log Result of Server-Sent Transaction Acknowledgement
             imeiapp.pubsub.subscribe(
 
                 "server-acknowledged-transaction",
@@ -910,12 +793,11 @@
                             },
                             null
                         );
-
                 },
                 null
             );
 
-        // screen-0-setup
+        // screen-1-setup
             imeiapp.pubsub.subscribe(
 
                 "screen-1-setup",
@@ -925,34 +807,157 @@
                     // req vars
                     var _app = imeiapp,
                         
+                        _DOM = _app.DOM,
+                        _utils = _app.utils,
                         _pubsub = _app.pubsub,
+
+                        _addClass = _utils.addClass,
+                        _removeClass = _utils.removeClass,
+
                         _publish = _pubsub.publish,
                         _subscribe = _pubsub.subscribe,
                         _unsubscribe = _pubsub.unsubscribe,
 
                         index = 1,
+                        nextBtn = _DOM.screens[ imeiapp.stats.step ].getElementsByClassName("nextStep")[0],
 
-                        startRegistration = function(){
+                        saveIMEI = function(){                            
 
-                            imeiapp.utils.gotoNextScreen();
+                            // Don't Save Empty Entries
+                                if ( !_DOM.IMEI.value ){
+
+                                    alert("No IMEI Number to Store");
+                                    
+                                    inputFieldAttentionGetter( _DOM.IMEI );
+
+                                    return;
+                                }
+
+                            // Create IMEI Container for Invoice if it doesn't exist
+                                if (!_app.currentInvoice.imeis){ _app.currentInvoice.imeis = []; }
+
+                            // Save to JSON Object
+                                _app.currentInvoice.imeis.push( _DOM.IMEI.value );
+
+                            // Update User
+                                alert("'" + _DOM.IMEI.value + "' has been stored" );
+
+                            // Broadcast New Tally
+                                _publish("imei-tally-updated", null, this );
+
+                            // Cleanup & Fix Focus
+                                _DOM.IMEI.value = null;
+                                _DOM.IMEI.focus();
+                        },
+
+                        editIMEI = function(){                            
+                                    
+                            // keep track of original total
+                                var totalOldIMEIs = _app.currentInvoice.imeis.length;
+
+                            // iterate over all attached invoices and review them
+                                for (var i = 0; i < _app.currentInvoice.imeis.length; i++) {
+
+                                    // keep track of pre-review imei total
+                                        var beforeReviewTally = _app.currentInvoice.imeis.length;
+
+                                    // process this IMEI
+                                        _utils.reviewIMEI(i);
+
+                                    // if a delete occured, fix index
+                                        if (beforeReviewTally > _app.currentInvoice.imeis.length){ i = i - (beforeReviewTally - _app.currentInvoice.imeis.length); }
+                                }
+
+                            // Check if any IMEIs are attached 
+                                if (_app.currentInvoice.imeis.length === 0){
+
+                                    alert("There are no IMEIs attached to this Invoice");
+                                }
+
+                            // Announce Tally Total Change if the numbers dont add up
+                                if (totalOldIMEIs !== _app.currentInvoice.imeis.length){                                
+
+                                    _publish("imei-tally-updated", null, this );
+                                }
+                        },
+
+                        inputFieldAttentionGetter = function(input){
+
+                            _addClass( input, "attention" );
+                            input.addEventListener('input', inputFieldAttentionRemover);
+                        },
+
+                        inputFieldAttentionRemover = function(){
+
+                            _removeClass( this, "attention" );
+                            this.removeEventListener('input', inputFieldAttentionRemover);
+                        },
+
+                        inputFieldEnterBtnLogic = function(e){
+
+                            // filter out non-enter btn presses
+                                if (e.keyCode !== 13){ return; }
+
+                            // special condition: empty field and at least 1 imei has already been stored
+                                if (this.value === "" && _app.currentInvoice.imeis.length > 0){
+                                    
+                                    nextBtn.click();
+                                }
+                            
+                            // do default
+                                else{ _DOM.saveIMEI.click(); }
+                        },
+
+                        setNextBtnVisibility = function(){
+
+                            if( _app.currentInvoice.imeis.length > 0 ){ _removeClass( nextBtn, "invisible"); }
+                            
+                            else { _addClass( nextBtn, "invisible"); }
                         },
 
                         screenSetup = function(){
 
+                            // activate save imei button
+                                _DOM.saveIMEI.addEventListener("click", saveIMEI);
+
+                            // activate edit imei button
+                                _DOM.editSavedIMEIs.addEventListener("click", editIMEI);
+
+                            // enter button behavior for input field
+                                _DOM.IMEI.addEventListener('keydown', inputFieldEnterBtnLogic);
+
+                            // determine if next button is shown or hidden
+                                setNextBtnVisibility();
+
+                            // set next button to recalculate visibility on tally change
+                                _subscribe("imei-tally-updated", "screen-" + index + "-next-btn", setNextBtnVisibility, null );
+
                             // ready visuals
-                                imeiapp.ui.activateScreen( index );
+                                _app.ui.activateScreen( index );
 
                             // set focus on input field
-                                imeiapp.DOM.IMEI.focus();
+                                _DOM.IMEI.focus();
 
                             // screen setup complete
                                 _publish("screen-setup-complete", null, "screen-" + index + "-setup");
                         },
 
                         screenTeardown = function(){
+
+                            // deactivate save imei button
+                                _DOM.saveIMEI.removeEventListener("click", saveIMEI);
+
+                            // deactivate edit imei button
+                                _DOM.editSavedIMEIs.removeEventListener("click", editIMEI);
+
+                            // remove enter button behavior for input field
+                                _DOM.IMEI.removeEventListener('keydown', inputFieldEnterBtnLogic);
                             
+                            // remove next button visibility updater
+                                _unsubscribe("imei-tally-updated", "screen-" + index + "-next-btn");
+
                             // disable visuals                          
-                                imeiapp.ui.deactivateScreen( index );
+                                _app.ui.deactivateScreen( index );
                         };
 
                     // do setup
@@ -973,7 +978,255 @@
                             },
                             null
                         );
+                },
+                null
+            );
 
+        // screen-2-setup
+            imeiapp.pubsub.subscribe(
+
+                "screen-2-setup",
+                "handyman",
+                function(){
+
+                    // req vars
+                    var _app = imeiapp,
+                        
+                        _DOM = _app.DOM,
+                        _utils = _app.utils,
+                        _pubsub = _app.pubsub,
+
+                        _addClass = _utils.addClass,
+                        _removeClass = _utils.removeClass,
+
+                        _publish = _pubsub.publish,
+                        _subscribe = _pubsub.subscribe,
+                        _unsubscribe = _pubsub.unsubscribe,
+
+                        index = 2,
+                        nextBtn = _DOM.screens[ imeiapp.stats.step ].getElementsByClassName("nextStep")[0],
+
+                        inputFieldAttentionGetter = function( input ){
+
+                            _addClass( input, "attention" );
+                            input.addEventListener('input', inputFieldAttentionRemover);
+                        }
+
+                        inputFieldAttentionRemover = function(){
+
+                            _removeClass( this, "attention" );
+                            this.removeEventListener('input', inputFieldAttentionRemover);
+                        },
+
+                        saveInvoiceNumber = function(){                            
+
+                            // Don't Save Empty Entries
+                                if ( !_DOM.invoice.value ){
+
+                                    alert("An Invoice Number is Needed to Continue");
+                                    
+                                    inputFieldAttentionGetter( _DOM.invoice );
+
+                                    return;
+                                }                            
+
+                            // Update Invoice Object
+                                imeiapp.currentInvoice.invoice = imeiapp.DOM.invoice.value;
+
+                                _publish("invoice-number-updated", null, this);
+
+                                alert("The Invoice Number is now '" + imeiapp.DOM.invoice.value + "'");
+                        },
+
+                        inputFieldEnterBtnLogic = function(e){
+
+                            // filter out non-enter btn presses
+                                if (e.keyCode !== 13){ return; }
+
+                            // special condition: empty field and at least 1 imei has already been stored
+                                if (this.value !== "" && _app.currentInvoice.invoice === this.value){
+                                    
+                                    nextBtn.click();
+                                }
+                            
+                            // do default
+                                else{ saveInvoiceNumber(); }
+                        },
+
+                        setNextBtnVisibility = function(){
+
+                            if( _app.currentInvoice.invoice && _app.currentInvoice.invoice !== "" ){ _removeClass( nextBtn, "invisible"); }
+                            
+                            else { _addClass( nextBtn, "invisible"); }
+                        },
+
+                        screenSetup = function(){
+
+                            // enter button behavior for input field
+                                _DOM.invoice.addEventListener('keydown', inputFieldEnterBtnLogic);
+
+                            // determine if next button is shown or hidden
+                                setNextBtnVisibility();
+
+                            // set next button to recalculate visibility on tally change
+                                _subscribe("invoice-number-updated", "screen-" + index + "-next-btn", setNextBtnVisibility, null );
+
+                            // ready visuals
+                                _app.ui.activateScreen( index );
+
+                            // set focus on input field
+                                _DOM.invoice.focus();
+
+                            // screen setup complete
+                                _publish("screen-setup-complete", null, "screen-" + index + "-setup");
+                        },
+
+                        screenTeardown = function(){
+
+                            // remove enter button behavior for input field
+                                _DOM.invoice.removeEventListener('keydown', inputFieldEnterBtnLogic);
+                            
+                            // remove next button visibility updater
+                                _unsubscribe("invoice-number-updated", "screen-" + index + "-next-btn");
+
+                            // disable visuals                          
+                                _app.ui.deactivateScreen( index );
+                        };
+
+                    // do setup
+                        screenSetup();
+
+                    // listen for teardown
+                        _subscribe(
+
+                            "screen-teardown",
+                            "screen-" + index + "-setup",
+                            function(){
+
+                                // do teardown
+                                    screenTeardown();
+
+                                // unsubscribe from tear-down list
+                                    _unsubscribe("screen-teardown", "screen-" + index + "-setup");
+                            },
+                            null
+                        );
+                },
+                null
+            );
+
+        // screen-3-setup
+            imeiapp.pubsub.subscribe(
+
+                "screen-3-setup",
+                "handyman",
+                function(){
+
+                    // req vars
+                    var _app = imeiapp,
+                        
+                        _DOM = _app.DOM,
+                        _utils = _app.utils,
+                        _pubsub = _app.pubsub,
+
+                        _addClass = _utils.addClass,
+                        _removeClass = _utils.removeClass,
+
+                        _publish = _pubsub.publish,
+                        _subscribe = _pubsub.subscribe,
+                        _unsubscribe = _pubsub.unsubscribe,
+
+                        index = 3,
+                        completeBtn = _DOM.completeRegistration,
+
+                        saveRegistration = function(){
+
+                            // store the registration
+                                _utils.storeRegistration( _app.currentInvoice );
+                            
+                            // job done! tell the world!!!
+                                _publish("registration-completed", null, this);
+                        },
+
+                        updateListOfIMEIs = function(){
+
+                            // required vars
+                            var imeiList = _DOM.imeiReviewList,
+                                entries = "";
+
+                            // create dom string for each imei
+                                for (var i = 0; i < imeiapp.currentInvoice.imeis.length; i++) {
+                                    entries = entries + "<span class='imeiForReview'>" + imeiapp.currentInvoice.imeis[i] + "</span>" + (i < imeiapp.currentInvoice.imeis.length - 1 ? " | " : "");
+                                }
+
+                            // render it
+                                imeiList.innerHTML = entries;
+
+                            // activate the links
+                                imeiapp.DOM.activateIMEIsForReview();
+                        },
+
+                        enterBtnLogic = function(e){
+
+                            // filter out non-enter btn presses
+                                if (e.keyCode !== 13){ return; }
+
+                            saveRegistration();
+                        },
+
+                        screenSetup = function(){
+
+                            // enable complete registration button
+                                completeBtn.addEventListener("click", saveRegistration);
+                            
+                            // ready global enter trapper
+                                window.addEventListener('keydown', enterBtnLogic);
+
+                            // Update List of IMEIs if Tally Changes
+                                _subscribe( 'imei-tally-updated', 'imei-list-updater', imeiapp.utils.updateListOfIMEIs, null );
+
+
+                            // ready visuals
+                                updateListOfIMEIs();
+                                _app.ui.activateScreen( index );
+
+                            // screen setup complete
+                                _publish("screen-setup-complete", null, "screen-" + index + "-setup");
+                        },
+
+                        screenTeardown = function(){
+
+                            // disable complete registration button
+                                completeBtn.removeEventListener("click", saveRegistration);
+
+                            // remove global enter trapper
+                                window.removeEventListener('keydown', enterBtnLogic);
+
+                            // Stop IMEI List Updater
+                                _unsubscribe( 'imei-tally-updated', 'imei-list-updater' );
+
+                            // disable visuals                          
+                                _app.ui.deactivateScreen( index );
+                        };
+
+                    // do setup
+                        screenSetup();
+
+                    // listen for teardown
+                        _subscribe(
+
+                            "screen-teardown",
+                            "screen-" + index + "-setup",
+                            function(){
+
+                                // do teardown
+                                    screenTeardown();
+
+                                // unsubscribe from tear-down list
+                                    _unsubscribe("screen-teardown", "screen-" + index + "-setup");
+                            },
+                            null
+                        );
                 },
                 null
             );
@@ -986,18 +1239,6 @@
                 e.preventDefault();
             });
 
-        // Enter Key Submits Invoice Number -> Invoice Number Field
-            imeiapp.DOM.invoice.addEventListener('keydown', function(e){
-
-                if (e.keyCode === 13){ /* do something here */ }
-            });
-
-        // Enter Key Saves IMEI -> IMEI Field
-            imeiapp.DOM.IMEI.addEventListener('keydown', function(e){
-
-                if (e.keyCode === 13){ imeiapp.DOM.saveIMEI.click(); }
-            });  
-
         // Force Screens to Full Window Height
             imeiapp.DOM.setScreensHeight = function(){
 
@@ -1009,108 +1250,6 @@
                 }
 
                 imeiapp.pubsub.publish('screensResized', null, 'screenResizer');
-            };
-
-        // Deactivate Active Screen
-            imeiapp.utils.deactivateActiveScreen = function(){
-
-                imeiapp.pubsub.publish( "screen-teardown", null, this);
-            };
-
-        // Activate Screen
-            imeiapp.utils.activateScreen = function(index){ 
-
-                imeiapp.pubsub.publish("screen-" + index + "-setup", null, this); 
-            };
-
-        // Go To Screen
-            imeiapp.utils.gotoScreen = function(index, duration){
- 
-                // Deactivate Current Screen
-                    imeiapp.utils.deactivateActiveScreen();
-
-                // Set Step
-                    imeiapp.stats.step = index;
-
-                // Activate New Screen
-                    imeiapp.utils.activateScreen( imeiapp.stats.step );
-            };
-
-            // Go To Next Screen
-                imeiapp.utils.gotoNextScreen = function(){
-
-                    imeiapp.utils.gotoScreen( imeiapp.stats.step + 1 );
-                };
-
-            // Go To Next Screen
-                imeiapp.utils.gotoPreviousScreen = function(){
-
-                    imeiapp.utils.gotoScreen( imeiapp.stats.step - 1 );
-                };
-
-        // Update IMEI List
-            imeiapp.utils.updateListOfIMEIs = function(){
-
-                var imeiList = imeiapp.DOM.imeiReviewList,
-                    entries = "";
-
-                imeiList.innerHTML = "";
-
-                for (var i = 0; i < imeiapp.currentInvoice.imeis.length; i++) {
-                    entries = entries + "<span class='imeiForReview'>" + imeiapp.currentInvoice.imeis[i] + "</span>" + (i < imeiapp.currentInvoice.imeis.length - 1 ? " | " : "");
-                }
-
-                imeiList.innerHTML = entries;
-
-                imeiapp.DOM.activateIMEIsForReview();
-            };
-
-            imeiapp.utils.reviewIMEI = function(index){
-
-                if (index < 0){ console.log("no index given to review for reviewIMEI()"); return; }
-
-                // Base Variables               
-                    var imei = imeiapp.currentInvoice.imeis[index];
-                    var requestEdit = confirm( "Is this IMEI (" + imei + ") Correct?");
-                    
-                    if(requestEdit !== true){
-
-                        var oldimei = imei;
-                        var newimei = prompt("Submit the Correct IMEI to Update or Submit a Blank Field to Delete '" + oldimei + "'", oldimei);
-
-                        var replaceIMEI = function(){
-
-                            imeiapp.currentInvoice.imeis[index] = newimei;
-                            alert("'" + oldimei + "' has been replaced with '" + newimei + "'");
-                        }
-
-                        var noChangeAnnouncement = function(){
-                            
-                            alert("'" + oldimei + "' has not been changed or deleted");
-                        }
-
-                        var confirmDeleteRequest = function(){
-
-                            var requestDelete = confirm("Are you sure you want to delete '" + oldimei + "'?");
-
-                            if (requestDelete !== true){
-
-                                alert("'" + oldimei + "' has not been deleted or modified");
-                                return;
-                            }
-
-                            imeiapp.currentInvoice.imeis.splice(index,1);
-                            alert("'" + oldimei + "' has been deleted");
-                        }
-
-                        if (newimei === oldimei || newimei === null){ noChangeAnnouncement(); }
-
-                        else if (newimei === "") { confirmDeleteRequest(); }
-
-                        else { replaceIMEI(); }
-
-                        imeiapp.utils.savedIMEIsTally();
-                    } 
             };
 
             imeiapp.DOM.activateIMEIsForReview = function(){
@@ -1140,7 +1279,7 @@
             }
 
         // Activate Next Buttons
-            for (var i = imeiapp.DOM.backBtn.length - 1; i >= 0; i--) {
+            for (var i = imeiapp.DOM.nextBtn.length - 1; i >= 0; i--) {
                 
                 imeiapp.DOM.nextBtn[i].addEventListener("click", function(){
 
@@ -1529,10 +1668,7 @@
 
             'network-up', 
             'online-indicator',
-            function(){
-
-                imeiapp.network.setOnlineState();
-            },
+            imeiapp.network.setOnlineState,
             null
         );
 
@@ -1541,10 +1677,7 @@
 
             'network-down', 
             'online-indicator',
-            function(){
-
-                imeiapp.network.setOfflineState();
-            },
+            imeiapp.network.setOfflineState,
             null
         );
 
@@ -1602,7 +1735,7 @@
                 // reqs
                 var _app = imeiapp,
                     _n = _app.network,
-                    _s = _app.storage,
+                    _s = window.localStorage,
                     _p = _app.pubsub,
 
                     _int = _n.intervals,
@@ -1666,7 +1799,7 @@
                 var _app = imeiapp,
                     _p = _app.pubsub,
                     _n = _app.network,
-                    _s = _app.storage,
+                    _s = window.localStorage,
 
                     _int = _n.intervals,
                     _sub = _p.subscribe,
@@ -1729,7 +1862,7 @@
                 var _app = imeiapp,
                     _p = _app.pubsub,
                     _n = _app.network,
-                    _s = _app.storage,
+                    _s = window.localStorage,
 
                     _int = _n.intervals,
                     _sub = _p.subscribe,
