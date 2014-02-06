@@ -343,3 +343,12 @@ input.attention::-webkit-input-placeholder {
 		margin-bottom: 1.25em;
 	}
 }
+
+@media only screen and (min-width:900px)  { 
+
+	.fullscreen {
+
+		font-size: 133%;
+		padding: 3.25em 5em;
+	}
+}
