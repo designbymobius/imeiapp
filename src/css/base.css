@@ -141,9 +141,9 @@ body #app-hud .connection-indicator.connection-checking {
 .fullscreen .subtext {
 
 	font-family: georgia, serif;
-	margin: 1em 2.825em 0 2.825em;
+	margin: 0.8823529em 2.492647058em 0 2.492647058em;
 	font-style: italic;
-	font-size: 0.75em;
+	font-size: 0.85em;
 	color: #777;
 	clear: both;
 }
@@ -257,18 +257,18 @@ body #app-hud .connection-indicator.connection-checking {
 	position: relative;
 	text-transform: uppercase;
 
-	border-bottom: 3px solid #3e7400;
-	text-shadow: 1px 1px 1px #3e7400;
+	border-bottom: 0.25em solid #3e7400;
+	text-shadow: 0.0625em 0.0625em 0.0625em #3e7400;
 	background-color: #8ab953;
 	margin-bottom: 1.5em;
 	padding: .35em .7em;
 	margin-right: 3em;
 	font-size: .75em;
 	color: #fff;
-	top: -4.2px;
+	top: -0.4em;
 
-	-webkit-border-radius: 5px 5px 5px 5px;
-	border-radius: 5px 5px 5px 5px;
+	-webkit-border-radius: 0.416666666666em 0.416666666666em 0.416666666666em 0.416666666666em;
+	border-radius: 0.416666666666em 0.416666666666em 0.416666666666em 0.416666666666em;
 }
 
 .progress:hover {
@@ -326,4 +326,20 @@ input.attention::-webkit-input-placeholder {
 .imeiForReview:active{
 
 	color: #8ab953;
+}
+
+@media only screen and (min-width:500px)  { 
+
+	.fullscreen {
+
+		font-size: 127%;
+		padding: 1em 2.5em;
+	}
+
+	#imeiReviewList {
+
+		line-height: 2em;
+		margin-top: 1.25em;
+		margin-bottom: 1.25em;
+	}
 }

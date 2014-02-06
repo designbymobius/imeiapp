@@ -241,7 +241,7 @@
                 }
 
             // Set Screen Sizes
-                _DOM.setScreensHeight();
+                _utils.setScreensHeight();
 
             // Start at the Beginning
                 _utils.gotoScreen(0);
@@ -506,6 +506,37 @@
                 } 
         };
 
+    // Force Screens to Full Window Height
+        imeiapp.utils.setScreensHeight = function(){
+
+            for (var i = imeiapp.DOM.screens.length - 1; i >= 0; i--) {
+
+                if (i < imeiapp.stats.step) { break; }
+                
+                imeiapp.DOM.screens[i].style.height = window.innerHeight + "px"; 
+            }
+
+            imeiapp.pubsub.publish('screensResized', null, 'screenResizer');
+        };
+
+    // Activate IMEI Links on Review Stage
+        imeiapp.utils.activateIMEIsForReview = function(){
+
+            var IMEIsForReview = imeiapp.DOM.IMEIsForReview;
+
+            for (var i = IMEIsForReview.length - 1; i >= 0; i--) {
+                
+                IMEIsForReview[i].addEventListener("click", function(){
+
+                    var index = i;
+
+                    return function(){
+                        imeiapp.utils.reviewIMEI(index);
+                    }                   
+                }());
+            }
+        };
+
 // # ANIMATION
     
     // ScrollTo
@@ -543,9 +574,9 @@
         }());
 
     // Scroll to Active Screen
-        imeiapp.animate.scrollToActiveScreen = function(){
+        imeiapp.animate.scrollToActiveScreen = function(duration){
 
-            imeiapp.animate.scrollTo( imeiapp.DOM.screens[imeiapp.stats.step].offsetTop );
+            imeiapp.animate.scrollTo( imeiapp.DOM.screens[imeiapp.stats.step].offsetTop, duration );
         };
 
 // # PUBSUB
@@ -656,7 +687,7 @@
             imeiapp.pubsub.subscribe(
                 'windowResized', 
                 'windowSizeWatchdog',
-                imeiapp.DOM.setScreensHeight,
+                imeiapp.utils.setScreensHeight,
                 null
             );
 
@@ -664,7 +695,10 @@
             imeiapp.pubsub.subscribe(
                 'screensResized', 
                 'autoScroller',
-                imeiapp.animate.scrollToActiveScreen,
+                function(){
+
+                    imeiapp.animate.scrollToActiveScreen(150);
+                },
                 null
             );
 
@@ -675,18 +709,10 @@
                 function(){
 
                     imeiapp.animate.scrollToActiveScreen();                    
-                    imeiapp.pubsub.publish("scrolled-to-active-screen", null, "scrollToActiveScreen");
+                    imeiapp.pubsub.publish("scrolled-to-active-screen", null, "autoScroller");
                 },
                 null
             );
-
-        // Fix Screen Height After Scrolling to It
-            imeiapp.pubsub.subscribe(
-                'gotToScreen', 
-                'activeScreenWatchdog',
-                imeiapp.DOM.setScreensHeight,
-                null
-                );
 
         // Log Result of Server-Sent Transaction Acknowledgement
             imeiapp.pubsub.subscribe(
@@ -1182,7 +1208,7 @@
                                 imeiList.innerHTML = entries;
 
                             // activate the links
-                                imeiapp.DOM.activateIMEIsForReview();
+                                imeiapp.utils.activateIMEIsForReview();
                         },
 
                         enterBtnLogic = function(e){
@@ -1257,36 +1283,6 @@
 
                 e.preventDefault();
             });
-
-        // Force Screens to Full Window Height
-            imeiapp.DOM.setScreensHeight = function(){
-
-                for (var i = imeiapp.DOM.screens.length - 1; i >= 0; i--) {
-
-                    if (i < imeiapp.stats.step) { break; }
-                    
-                    imeiapp.DOM.screens[i].style.height = window.innerHeight + "px"; 
-                }
-
-                imeiapp.pubsub.publish('screensResized', null, 'screenResizer');
-            };
-
-            imeiapp.DOM.activateIMEIsForReview = function(){
-
-                var IMEIsForReview = imeiapp.DOM.IMEIsForReview;
-
-                for (var i = IMEIsForReview.length - 1; i >= 0; i--) {
-                    
-                    IMEIsForReview[i].addEventListener("click", function(){
-
-                        var index = i;
-
-                        return function(){
-                            imeiapp.utils.reviewIMEI(index);
-                        }                   
-                    }());
-                }
-            };
 
         // Activate Back Buttons
             for (var i = imeiapp.DOM.backBtn.length - 1; i >= 0; i--) {
