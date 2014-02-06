@@ -120,7 +120,7 @@ module.exports = function(grunt) {
             
             css: {
               files: ['<%= srcDirectory %>/css/*.css'], 
-              tasks: ['prepCSS', 'build'],
+              tasks: ['cssmin', 'build'],
             },
             
             html: {
@@ -130,7 +130,7 @@ module.exports = function(grunt) {
             
             htaccess: {
               files: ['<%= srcDirectory %>/.htaccess'], 
-              tasks: ['prepHTACCESS'],
+              tasks: ['copy:htaccess'],
             },
 
         }, 
@@ -236,12 +236,9 @@ module.exports = function(grunt) {
 		grunt.loadNpmTasks('grunt-manifest');
 
 	// Register Tasks
-		grunt.registerTask('prepCSS', ['cssmin']);
-		grunt.registerTask('prepPHP', ['copy:php']);
-		grunt.registerTask('prepHTML', ['htmlbuild']);
-		grunt.registerTask('prepManifest', ['manifest']);
-		grunt.registerTask('prepHTACCESS', ['copy:htaccess']);
-		grunt.registerTask('deploy', ['build', 'ftp-deploy:production']);
 		grunt.registerTask('prepJS', ['jshint:beforeconcat','uglify']);
-		grunt.registerTask('build', ['prepManifest', 'prepHTML', 'prepHTACCESS', 'prepPHP', 'copy:production', 'copy:manifest']);
+		grunt.registerTask('copyForBuild', ['copy:htaccess', 'copy:php', 'copy:production', 'copy:manifest']);		
+		
+		grunt.registerTask('build', ['manifest', 'htmlbuild', 'copyForBuild']);
+		grunt.registerTask('deploy', ['ftp-deploy:production']);
 };
