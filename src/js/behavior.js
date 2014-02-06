@@ -210,24 +210,22 @@
                 var _DOM = _app.DOM,
                     _utils = _app.utils,
                     _pubsub = _app.pubsub,
-                    _storage = window.localStorage,
                     _network = _app.network;
 
-                var _publish = _pubsub.publish,
-                    _registrations = _storage.registrations;            
+                var _publish = _pubsub.publish;            
 
             // Prep Storage Areas
-                if(!_storage.registrations){
+                if( !window.localStorage.registrations ){
 
                     _utils.createRegistrationStorage();
                 }
 
-                if(!_storage.transactions){
+                if( !window.localStorage.transactions ){
 
                     _utils.createTransactionStorage();
                 }
 
-                if(!_storage.archives){
+                if( !window.localStorage.archives ){
 
                     _utils.createArchiveStorage();
                 }
@@ -267,14 +265,14 @@
     // Create Storage
         imeiapp.utils.createStorage = function(storageAreaName, type){
 
-            var _sto= storageAreaName;
+            // req vars
                 type = type || "[]";
             
             // filter
-                if ( _storage[storageAreaName] ){ return false; }
+                if ( window.localStorage[storageAreaName] ){ return false; }
             
-            // creatio);
-                _storage[storageAreaName] = type;
+            // creation
+                window.localStorage[storageAreaName] = type;
                 return true;
         };
 
@@ -324,6 +322,9 @@
                 var storage = imeiapp.utils.getRegistrationStorage();
                 storage.push(registration);
 
+            // commit changes
+                window.localStorage.registrations = JSON.stringify(storage);
+
             return true;
         };
 
@@ -350,10 +351,10 @@
 
             // update transactions storage
                 transactions_db[transaction_id] = transaction_string;
-                imeiapp.storage.transactions = JSON.stringify(transactions_db);
+                window.localStorage.transactions = JSON.stringify(transactions_db);
 
             // reset registrations storage
-                delete imeiapp.storage.registrations;
+                delete window.localStorage.registrations;
                 imeiapp.utils.createRegistrationStorage();
 
             return transaction_id;
@@ -385,6 +386,10 @@
                 archives_db[transaction_id] = transactions_db[transaction_id];
                 delete transactions_db[transaction_id];
 
+            // commit
+                window.localStorage.transactions = JSON.stringify(transactions_db);
+                window.localStorage.archives = JSON.stringify(archives_db);
+
             return true;
         };
 
@@ -394,13 +399,17 @@
             // filter
                 if (!transaction_id){ return false; }
 
-            // load tools
-                var _u = imeiapp.utils;
-
-                var archives_db = _u.getArchiveStorage();
+            // req vars
+                var _u = imeiapp.utils,
+                    archives_db = _u.getArchiveStorage();
 
             // transfer transaction to archives
                 delete archives_db[transaction_id];
+
+            // commit
+                window.localStorage.archives = JSON.stringify(archives_db);
+
+            // log
                 console.log("deleted transaction #" + transaction_id + " from archives");
 
             return true;
@@ -1725,7 +1734,7 @@
             null
         );
 
-    // Transaction -> Check Status on Server
+    // Confirm Transaction was Received by Server
         imeiapp.pubsub.subscribe(
 
             'network-up', 
