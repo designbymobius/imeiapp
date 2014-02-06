@@ -450,30 +450,12 @@
                 imeiapp.utils.gotoScreen( imeiapp.stats.step - 1 );
             };
 
-    //  *DELETE THIS*
-        // Update IMEI List
-            imeiapp.utils.updateListOfIMEIs = function(){
-
-                var imeiList = imeiapp.DOM.imeiReviewList,
-                    entries = "";
-
-                imeiList.innerHTML = "";
-
-                for (var i = 0; i < imeiapp.currentInvoice.imeis.length; i++) {
-                    entries = entries + "<span class='imeiForReview'>" + imeiapp.currentInvoice.imeis[i] + "</span>" + (i < imeiapp.currentInvoice.imeis.length - 1 ? " | " : "");
-                }
-
-                imeiList.innerHTML = entries;
-
-                imeiapp.DOM.activateIMEIsForReview();
-            };        
-
     // Update sections that display the Invoice Number 
         imeiapp.utils.updateInvoiceNumberReferences = function(){
 
-                for (var i = imeiapp.DOM.invoiceNumberSlots.length - 1; i >= 0; i--) {
-                    imeiapp.DOM.invoiceNumberSlots[i].innerHTML = "#" + imeiapp.DOM.invoice.value; 
-                }
+            for (var i = imeiapp.DOM.invoiceNumberSlots.length - 1; i >= 0; i--) {
+                imeiapp.DOM.invoiceNumberSlots[i].innerHTML = "#" + imeiapp.DOM.invoice.value; 
+            }
         };
 
         imeiapp.utils.reviewIMEI = function(index){
@@ -690,7 +672,11 @@
             imeiapp.pubsub.subscribe(
                 'screen-setup-complete', 
                 'autoScroller',
-                imeiapp.animate.scrollToActiveScreen,
+                function(){
+
+                    imeiapp.animate.scrollToActiveScreen();                    
+                    imeiapp.pubsub.publish("scrolled-to-active-screen", null, "scrollToActiveScreen");
+                },
                 null
             );
 
@@ -941,11 +927,23 @@
                             // set next button to recalculate visibility on tally change
                                 _subscribe("imei-tally-updated", "screen-" + index + "-next-btn", setNextBtnVisibility, null );
 
+                            // set focus on input field after page has scrolled to                                
+                                _subscribe(
+                                    "scrolled-to-active-screen", 
+                                    "focus-setter", 
+                                    function(){
+
+                                        // set focus on input field
+                                            _DOM.IMEI.focus();
+
+                                        // unsubscribe (one time event)
+                                            _unsubscribe("scrolled-to-active-screen", "focus-setter");
+                                    }, 
+                                    null 
+                                );
+
                             // ready visuals
                                 _app.ui.activateScreen( index );
-
-                            // set focus on input field
-                                _DOM.IMEI.focus();
 
                             // screen setup complete
                                 _publish("screen-setup-complete", null, "screen-" + index + "-setup");
@@ -1083,8 +1081,20 @@
                             // ready visuals
                                 _app.ui.activateScreen( index );
 
-                            // set focus on input field
-                                _DOM.invoice.focus();
+                            // set focus on input field after page has scrolled to                                
+                                _subscribe(
+                                    "scrolled-to-active-screen", 
+                                    "focus-setter", 
+                                    function(){
+
+                                        // set focus on input field
+                                            _DOM.invoice.focus();
+
+                                        // unsubscribe (one time event)
+                                            _unsubscribe("scrolled-to-active-screen", "focus-setter");
+                                    }, 
+                                    null 
+                                );
 
                             // screen setup complete
                                 _publish("screen-setup-complete", null, "screen-" + index + "-setup");
