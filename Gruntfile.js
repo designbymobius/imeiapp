@@ -18,7 +18,8 @@ module.exports = function(grunt) {
 			'<%= srcDirectory %>/js/pubsub.js', 
 			'<%= srcDirectory %>/js/sha1.js', 
 			'<%= srcDirectory %>/js/behavior.js', 
-			'<%= srcDirectory %>/js/app-init.js'
+			'<%= srcDirectory %>/js/app-init.js',
+			'<%= srcDirectory %>/js/google-analytics.js'
 		],
 
 		coreCSS: [
@@ -37,7 +38,7 @@ module.exports = function(grunt) {
 				browser: true,
 				loopfunc: true,
 				lastsemic: true,
-				ignores: ['<%= srcDirectory %>/js/offline.min.js','<%= srcDirectory %>/js/sha1.js']
+				ignores: ['<%= srcDirectory %>/js/offline.min.js','<%= srcDirectory %>/js/sha1.js','<%= srcDirectory %>/js/google-analytics.js']
 			},
 
 			beforeconcat: '<%= coreJS %>'
