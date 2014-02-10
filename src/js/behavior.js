@@ -1228,7 +1228,7 @@
                                 window.addEventListener('keydown', enterBtnLogic);
 
                             // Update List of IMEIs if Tally Changes
-                                _subscribe( 'imei-tally-updated', 'imei-list-updater', imeiapp.utils.updateListOfIMEIs, null );
+                                _subscribe( 'imei-tally-updated', 'imei-list-updater', updateListOfIMEIs, null );
 
 
                             // ready visuals
